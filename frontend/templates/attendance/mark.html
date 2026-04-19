@@ -94,8 +94,10 @@
         document.getElementById('sess-teacher').textContent = session.teacher_name;
         document.getElementById('sess-classroom').textContent = session.classroom_name;
         
-        // Timer
-        const endTime = new Date(session.end_time_limit + 'Z').getTime();
+        // Timer - dynamically check if timezone is already present to prevent NaN crashes
+        let ts = session.end_time_limit;
+        if (!ts.endsWith('Z') && !ts.includes('+') && !ts.includes('-')) ts += 'Z';
+        const endTime = new Date(ts).getTime();
         
         countdownInterval = setInterval(() => {
             const now = new Date().getTime();

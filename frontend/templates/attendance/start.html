@@ -222,8 +222,11 @@
         
         // Start Countdown calculation
         // Ensure duration_minutes is cast correctly to minutes from the payload
-        const durationMs = parseInt(session.end_time_limit ? 
-                            (new Date(session.end_time_limit + 'Z').getTime() - new Date().getTime()) : 
+        let ts = session.end_time_limit;
+        if (ts && !ts.endsWith('Z') && !ts.includes('+') && !ts.includes('-')) ts += 'Z';
+        
+        const durationMs = parseInt(ts ? 
+                            (new Date(ts).getTime() - new Date().getTime()) : 
                             (document.getElementById('duration_minutes').value * 60 * 1000));
                             
         const endTime = new Date().getTime() + durationMs;
