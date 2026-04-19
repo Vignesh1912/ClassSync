@@ -120,7 +120,7 @@ def api_active_sessions():
             subject = Subject.query.get(s.subject_id)
             d['subject_name'] = subject.subject_name if subject else 'Unknown'
             # Check what "now" is in UTC for the timer
-            d['server_time_utc'] = now.isoformat() 
+            d['server_time_utc'] = now.isoformat() + 'Z' if not now.tzinfo else now.isoformat()
             results.append(d)
         return jsonify(results)
         
@@ -143,7 +143,8 @@ def api_active_sessions():
             teacher_user = Teacher.query.get(s.teacher_id).user
             d['subject_name'] = subject.subject_name if subject else 'Unknown'
             d['teacher_name'] = teacher_user.name if teacher_user else 'Unknown'
-            d['server_time_utc'] = now.isoformat()
+            # Ensure Z is appended so JS knows it is UTC
+            d['server_time_utc'] = now.isoformat() + 'Z' if not now.tzinfo else now.isoformat()
             results.append(d)
         return jsonify(results)
         
@@ -168,7 +169,10 @@ def api_mark_attendance():
             return _log_and_reject(session_id, current_user.student_profile.id, 'Session not found', latitude, longitude, 404)
             
         now = datetime.utcnow()
-        if sess.end_time_limit < now or sess.status != 'active':
+        # Fix offset-naive vs aware bug across databases
+        end_time = sess.end_time_limit.replace(tzinfo=None) if sess.end_time_limit.tzinfo else sess.end_time_limit
+        
+        if end_time < now or sess.status != 'active':
             if sess.status == 'active':
                 sess.status = 'expired'
                 db.session.commit()
