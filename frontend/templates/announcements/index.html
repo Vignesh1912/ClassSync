@@ -1,0 +1,303 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div style="max-width:760px;">
+
+    <!-- Post form (admin/hod/teacher only) -->
+    {% if current_user.role in ['admin', 'hod', 'teacher'] %}
+    <div style="margin-bottom:1.25rem;">
+        <button id="toggle-form-btn" onclick="togglePostForm()"
+            class="btn-sm primary" style="font-size:.85rem;gap:.4rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Post Announcement
+        </button>
+
+        <div id="post-form" style="display:none;margin-top:1rem;" class="cs-card">
+            <div class="cs-card-title" style="margin-bottom:1.25rem;">New Announcement</div>
+            <div class="form-group">
+                <label class="form-label">Title *</label>
+                <input type="text" id="ann-title" class="form-control" placeholder="Announcement title">
+            </div>
+            <div class="form-group" style="margin-top:.75rem;">
+                <label class="form-label">Content *</label>
+                <textarea id="ann-content" class="form-control" rows="4" placeholder="Write your announcement…" style="resize:vertical;"></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem;">
+                <div class="form-group">
+                    <label class="form-label">Priority</label>
+                    <select id="ann-priority" class="form-control">
+                        <option value="normal">Normal</option>
+                        <option value="important">Important</option>
+                        {% if current_user.role in ['admin','hod'] %}
+                        <option value="urgent">Urgent</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Audience</label>
+                    <select id="ann-audience" class="form-control">
+                        <option value="all">Everyone</option>
+                        <option value="student">Students only</option>
+                        <option value="teacher">Teachers only</option>
+                        <option value="hod">HOD only</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem;">
+                <div class="form-group">
+                    <label class="form-label">Class <span style="color:#94a3b8;font-weight:400;">(optional)</span></label>
+                    <input type="text" id="ann-class" class="form-control" placeholder="e.g. SE-A">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Department <span style="color:#94a3b8;font-weight:400;">(optional)</span></label>
+                    <input type="text" id="ann-dept" class="form-control" placeholder="e.g. CSE">
+                </div>
+            </div>
+            <div style="display:flex;gap:.6rem;margin-top:1rem;align-items:center;">
+                <button onclick="postAnnouncement()" class="btn-sm primary">Post</button>
+                <button onclick="togglePostForm()" class="btn-sm ghost">Cancel</button>
+                <span id="post-spinner" style="display:none;color:#94a3b8;font-size:.82rem;">Posting…</span>
+            </div>
+            <div id="post-error" style="display:none;margin-top:.6rem;padding:.6rem 1rem;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:.82rem;"></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Search + filters -->
+    <div class="cs-card" style="margin-bottom:1.25rem;">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="ann-search" placeholder="Search by title or content…" style="border:none;outline:none;width:100%;font-size:.85rem;color:#1a1a2e;background:transparent;" oninput="filterFeed()">
+        </div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+            <button class="filter-btn" data-filter="urgent" onclick="setFilter('urgent')">🔴 Urgent</button>
+            <button class="filter-btn" data-filter="important" onclick="setFilter('important')">🟡 Important</button>
+            <button class="filter-btn" data-filter="normal" onclick="setFilter('normal')">🔵 Normal</button>
+        </div>
+    </div>
+
+    <!-- Feed -->
+    <div id="feed-loading" style="color:#94a3b8;font-size:.88rem;padding:1rem 0;">Loading announcements…</div>
+    <div id="feed-empty" style="display:none;text-align:center;color:#94a3b8;padding:3rem;background:#f8fafc;border-radius:14px;border:1px solid #e8eaf0;font-size:.9rem;">
+        No announcements found.
+    </div>
+    <div id="feed-list" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+</div>
+
+<style>
+.filter-btn {
+    padding: .35rem .9rem;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+}
+.filter-btn.active, .filter-btn:hover {
+    background: #3B5BFF;
+    color: #fff;
+    border-color: #3B5BFF;
+}
+.ann-card {
+    background: #fff;
+    border: 1px solid #e8eaf0;
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+    cursor: pointer;
+    transition: box-shadow .18s;
+    position: relative;
+}
+.ann-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+.ann-card.unread { border-left: 3.5px solid #3B5BFF; background: #f7f9ff; }
+.ann-card.urgent-card { border-left: 3.5px solid #dc2626; background: #fff5f5; }
+.pinned-tag {
+    position: absolute; top: 1rem; right: 1.1rem;
+    font-size: .65rem; font-weight: 700;
+    background: #fee2e2; color: #dc2626;
+    padding: 2px 8px; border-radius: 999px;
+    border: 1px solid #fecaca;
+    letter-spacing: .04em;
+}
+</style>
+
+<script>
+const ROLE = "{{ current_user.role }}";
+const CURRENT_USER_ID = {{ current_user.id }};
+let allAnnouncements = [];
+let activeFilter = 'all';
+
+function togglePostForm() {
+    const f = document.getElementById('post-form');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function timeAgo(iso) {
+    const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + ' min ago';
+    if (diff < 86400) return Math.floor(diff/3600) + ' hrs ago';
+    return Math.floor(diff/86400) + ' d ago';
+}
+
+const pCfg = {
+    urgent:    { label:'URGENT',    cls:'badge-urgent',    dot:'#dc2626' },
+    important: { label:'IMPORTANT', cls:'badge-important', dot:'#d97706' },
+    normal:    { label:'NORMAL',    cls:'badge-normal',    dot:'#3B5BFF' }
+};
+
+function buildCard(a) {
+    const pc = pCfg[a.priority] || pCfg.normal;
+    const card = document.createElement('div');
+    card.id = 'ann-card-' + a.id;
+    card.dataset.priority = a.priority;
+    card.dataset.title = a.title.toLowerCase();
+    card.dataset.content = a.content.toLowerCase();
+
+    let cls = 'ann-card';
+    if (a.priority === 'urgent') cls += ' urgent-card';
+    else if (!a.is_read) cls += ' unread';
+    card.className = cls;
+
+    const isPinned = a.priority === 'urgent';
+    const canDelete = ROLE === 'admin' || ROLE === 'hod' || a.posted_by === CURRENT_USER_ID;
+    const receiptBtn = (ROLE === 'admin' || ROLE === 'hod')
+        ? `<button onclick="showReceipts(${a.id},event)" style="background:none;border:none;color:#94a3b8;font-size:.72rem;cursor:pointer;padding:0;">👁 ${a.read_count} read</button>`
+        : '';
+    const deleteBtn = canDelete
+        ? `<button onclick="deleteAnn(${a.id},event)" style="background:none;border:none;color:#ef4444;font-size:.72rem;cursor:pointer;padding:0;margin-left:.5rem;">🗑 Delete</button>`
+        : '';
+
+    card.innerHTML = `
+        ${isPinned ? '<span class="pinned-tag">📌 PINNED</span>' : ''}
+        <div style="display:flex;align-items:flex-start;gap:.75rem;margin-bottom:.5rem;">
+            <span style="width:8px;height:8px;border-radius:50%;background:${pc.dot};margin-top:4px;flex-shrink:0;"></span>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;font-size:.95rem;color:#1a1a2e;line-height:1.3;">${a.title}</div>
+                <div style="font-size:.75rem;color:#94a3b8;margin-top:3px;">
+                    <span class="priority-badge ${pc.cls}" style="font-size:.62rem;margin-right:.4rem;">${pc.label}</span>
+                    Posted by <strong>${a.author_name}</strong> · ${a.author_role} · ${timeAgo(a.created_at)}
+                    ${a.target_class ? ' · ' + a.target_class : ''}
+                    ${a.target_audience !== 'all' ? ' · ' + a.target_audience + 's' : ' · All'}
+                </div>
+            </div>
+        </div>
+        <div style="font-size:.85rem;color:#475569;line-height:1.65;padding-left:1.25rem;white-space:pre-wrap;">${a.content}</div>
+        <div style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;padding-left:1.25rem;">
+            ${receiptBtn}${deleteBtn}
+        </div>`;
+
+    card.addEventListener('click', () => markRead(a.id, card));
+    return card;
+}
+
+function markRead(id, card) {
+    fetch('/api/announcements/mark-read/' + id, { method:'POST' })
+        .then(() => {
+            card.classList.remove('unread');
+            refreshAnnBadge();
+        });
+}
+
+function loadFeed() {
+    fetch('/api/announcements/list')
+        .then(r => r.json())
+        .then(data => {
+            allAnnouncements = Array.isArray(data) ? data : [];
+            document.getElementById('feed-loading').style.display = 'none';
+            renderFeed();
+        });
+}
+
+function renderFeed() {
+    const q = (document.getElementById('ann-search').value || '').toLowerCase();
+    let filtered = allAnnouncements.filter(a => {
+        if (activeFilter !== 'all' && a.priority !== activeFilter) return false;
+        if (q && !a.title.toLowerCase().includes(q) && !a.content.toLowerCase().includes(q)) return false;
+        return true;
+    });
+
+    const list = document.getElementById('feed-list');
+    list.innerHTML = '';
+    document.getElementById('feed-empty').style.display = filtered.length ? 'none' : 'block';
+
+    filtered.forEach(a => list.appendChild(buildCard(a)));
+}
+
+function setFilter(f) {
+    activeFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === f);
+    });
+    renderFeed();
+}
+
+function filterFeed() { renderFeed(); }
+
+function showReceipts(id, e) {
+    e.stopPropagation();
+    fetch('/api/announcements/read-receipts/' + id)
+        .then(r => r.json())
+        .then(rows => {
+            const names = rows.map(r => `${r.name} (${r.role})`).join('\n') || 'No one yet';
+            alert('Read by:\n' + names);
+        });
+}
+
+function deleteAnn(id, e) {
+    e.stopPropagation();
+    if (!confirm('Delete this announcement? This cannot be undone.')) return;
+    fetch('/api/announcements/delete/' + id, { method:'DELETE' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                allAnnouncements = allAnnouncements.filter(a => a.id !== id);
+                renderFeed();
+                refreshAnnBadge();
+            }
+        });
+}
+
+function postAnnouncement() {
+    const title = document.getElementById('ann-title').value.trim();
+    const content = document.getElementById('ann-content').value.trim();
+    const priority = document.getElementById('ann-priority').value;
+    const audience = document.getElementById('ann-audience').value;
+    const cls = document.getElementById('ann-class').value.trim();
+    const dept = document.getElementById('ann-dept').value.trim();
+    const errEl = document.getElementById('post-error');
+    errEl.style.display = 'none';
+
+    if (!title || !content) {
+        errEl.style.display='block';
+        errEl.textContent='Title and content are required.';
+        return;
+    }
+
+    document.getElementById('post-spinner').style.display='inline';
+    fetch('/api/announcements/create', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ title, content, priority, target_audience:audience, target_class:cls||null, target_department:dept||null })
+    })
+    .then(r => r.json().then(d => ({ok:r.ok,d})))
+    .then(({ok,d}) => {
+        document.getElementById('post-spinner').style.display='none';
+        if (!ok) { errEl.style.display='block'; errEl.textContent=d.error||'Error posting.'; return; }
+        ['ann-title','ann-content','ann-class','ann-dept'].forEach(id => document.getElementById(id).value='');
+        document.getElementById('post-form').style.display='none';
+        loadFeed();
+        refreshAnnBadge();
+    })
+    .catch(() => {
+        document.getElementById('post-spinner').style.display='none';
+        errEl.style.display='block'; errEl.textContent='Network error.';
+    });
+}
+
+loadFeed();
+</script>
+{% endblock %}

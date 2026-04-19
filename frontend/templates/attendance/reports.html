@@ -1,0 +1,217 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div style="max-width: 1200px;">
+
+    <!-- Header -->
+    <div style="margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-dark);">Attendance Reports</h2>
+        <p style="color: var(--text-light); margin-top: 0.25rem; font-size: 0.9rem;">
+            Per-student attendance breakdown across all subjects.
+        </p>
+    </div>
+
+    <!-- Summary Bar -->
+    <div id="summary-bar" style="display: none; gap: 1rem; margin-bottom: 1.5rem; grid-template-columns: repeat(3,1fr);">
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.25rem;">
+            <div style="font-size: 0.78rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">Total Students</div>
+            <div id="stat-total" style="font-size: 1.8rem; font-weight: 700; color: var(--text-dark); margin-top: 4px;">—</div>
+        </div>
+        <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 12px; padding: 1rem 1.25rem;">
+            <div style="font-size: 0.78rem; color: #dc2626; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">At Risk (&lt;75%)</div>
+            <div id="stat-risk" style="font-size: 1.8rem; font-weight: 700; color: #dc2626; margin-top: 4px;">—</div>
+        </div>
+        <div style="background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 12px; padding: 1rem 1.25rem;">
+            <div style="font-size: 0.78rem; color: #16a34a; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">Above 75%</div>
+            <div id="stat-safe" style="font-size: 1.8rem; font-weight: 700; color: #16a34a; margin-top: 4px;">—</div>
+        </div>
+    </div>
+
+    <!-- Filter Row -->
+    <div id="filter-row" style="display: none; align-items: center; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <label style="font-size: 0.88rem; font-weight: 600; color: var(--text-dark);">Filter by Section:</label>
+            <select id="section-filter" class="form-control" style="width: auto; min-width: 200px; border-radius: 8px;"
+                    onchange="applyFilter()">
+                <option value="">All Sections</option>
+            </select>
+        </div>
+
+        <button onclick="exportToCSV()" class="btn-sm primary" style="margin-left: auto;">
+            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Export to CSV
+        </button>
+    </div>
+
+    <!-- Loading / Error / Empty states -->
+    <div id="tbl-loading" style="color: var(--text-light); padding: 1.5rem 0;">Loading report data…</div>
+    <div id="tbl-error"   style="display:none; color:#ef4444; padding: 0.75rem 0;"></div>
+    <div id="tbl-empty"   style="display:none; text-align:center; color:var(--text-light); padding: 2rem 0;">
+        No attendance records found.
+    </div>
+
+    <!-- Table -->
+    <div id="table-wrap" style="display:none; overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                    <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-light); font-size: 0.78rem; text-transform: uppercase; letter-spacing: .04em;">Student Name</th>
+                    <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-light); font-size: 0.78rem; text-transform: uppercase; letter-spacing: .04em;">User ID</th>
+                    <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-light); font-size: 0.78rem; text-transform: uppercase; letter-spacing: .04em;">Section</th>
+                    <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-light); font-size: 0.78rem; text-transform: uppercase; letter-spacing: .04em;">Overall %</th>
+                    <th style="padding: 0.75rem 1rem; font-weight: 600; color: var(--text-light); font-size: 0.78rem; text-transform: uppercase; letter-spacing: .04em;">Status</th>
+                </tr>
+            </thead>
+            <tbody id="report-tbody"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+let allStudents = [];
+
+fetch('/api/attendance/class-stats')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('tbl-loading').style.display = 'none';
+
+        if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById('tbl-empty').style.display = 'block';
+            return;
+        }
+
+        allStudents = data;
+
+        // Populate section filter
+        const sections = [...new Set(data.map(s => s.class_section).filter(Boolean))].sort();
+        const sel = document.getElementById('section-filter');
+        sections.forEach(sec => {
+            const opt = document.createElement('option');
+            opt.value = sec;
+            opt.textContent = sec;
+            sel.appendChild(opt);
+        });
+
+        document.getElementById('summary-bar').style.display = 'grid';
+        document.getElementById('filter-row').style.display  = 'flex';
+        document.getElementById('table-wrap').style.display  = 'block';
+
+        renderTable(data);
+    })
+    .catch(() => {
+        document.getElementById('tbl-loading').style.display = 'none';
+        const el = document.getElementById('tbl-error');
+        el.style.display = 'block';
+        el.textContent = 'Failed to load report data. Please refresh.';
+    });
+
+function exportToCSV() {
+    const sel = document.getElementById('section-filter').value;
+    const students = sel ? allStudents.filter(s => s.class_section === sel) : allStudents;
+    
+    if (students.length === 0) {
+        alert('No data to export');
+        return;
+    }
+
+    const csvContent = [];
+    const headers = ["Student Name", "College ID", "Section", "Overall Percentage", "Status"];
+    
+    // Get unique subject names present in individual payloads
+    const subjectNames = [...new Set(students.flatMap(s => s.subjects.map(sub => sub.subject_name)))].sort();
+    headers.push(...subjectNames);
+    
+    csvContent.push(headers.map(h => `"${h}"`).join(","));
+
+    students.forEach(s => {
+        const status = s.at_risk ? "At Risk" : "Good";
+        const row = [
+            `"${s.student_name.replace(/"/g, '""')}"`,
+            `"${s.college_user_id || '-'}"`,
+            `"${s.class_section || '-'}"`,
+            `"${s.overall_percentage}%"`,
+            `"${status}"`
+        ];
+        
+        subjectNames.forEach(name => {
+            const sub = s.subjects.find(sub => sub.subject_name === name);
+            if (sub) {
+                 // Listing Attended / Total so Admin can see raw numbers alongside %
+                row.push(`"${sub.attended}/${sub.total} (${sub.percentage}%)"`);
+            } else {
+                row.push('"-"');
+            }
+        });
+        csvContent.push(row.join(","));
+    });
+
+    const csvString = csvContent.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    const date = new Date().toISOString().split('T')[0];
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Attendance_Report_${(sel || 'All_Sections').replace(/[\s/]/g, '_')}_${date}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function applyFilter() {
+    const sel = document.getElementById('section-filter').value;
+    const filtered = sel ? allStudents.filter(s => s.class_section === sel) : allStudents;
+    renderTable(filtered);
+}
+
+function renderTable(students) {
+    const total   = students.length;
+    const atRisk  = students.filter(s => s.at_risk).length;
+    const safe    = total - atRisk;
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-risk').textContent  = atRisk;
+    document.getElementById('stat-safe').textContent  = safe;
+
+    const tbody = document.getElementById('report-tbody');
+    tbody.innerHTML = '';
+
+    students.forEach(student => {
+        const pct = student.overall_percentage;
+        const riskBg = student.at_risk ? '#fff5f5' : '#fff';
+
+        // Build subject tooltip text
+        const subjectDetail = student.subjects
+            .map(s => `${s.subject_name}: ${s.attended}/${s.total} (${s.percentage}%)`)
+            .join(' | ');
+
+        const statusBadge = student.at_risk
+            ? '<span style="font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">At Risk</span>'
+            : '<span style="font-size:0.78rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;">Good</span>';
+
+        const barColor = student.at_risk ? '#ef4444' : '#22c55e';
+
+        const tr = document.createElement('tr');
+        tr.style.cssText = `border-bottom: 1px solid var(--border-color); background: ${riskBg};`;
+        tr.innerHTML = `
+            <td style="padding: 0.9rem 1rem; font-weight: 500;" title="${subjectDetail}">${student.student_name}</td>
+            <td style="padding: 0.9rem 1rem; color: var(--text-light);">${student.college_user_id}</td>
+            <td style="padding: 0.9rem 1rem; color: var(--text-light);">${student.class_section}</td>
+            <td style="padding: 0.9rem 1rem;">
+                <div style="display:flex; align-items:center; gap: 0.75rem;">
+                    <div style="flex:1; height:6px; background:#f1f5f9; border-radius:999px; max-width:120px;">
+                        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:999px;"></div>
+                    </div>
+                    <span style="font-weight:600; color:var(--text-dark); min-width:40px;">${pct}%</span>
+                </div>
+            </td>
+            <td style="padding: 0.9rem 1rem;">${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+</script>
+{% endblock %}

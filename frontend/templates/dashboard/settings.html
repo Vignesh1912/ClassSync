@@ -1,0 +1,54 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Settings Card -->
+    <div class="auth-card" style="box-shadow: none; border: 1px solid var(--border-color); max-width: 600px;">
+        <h2>Settings</h2>
+        <p style="margin-top: 1rem; color: var(--text-light); margin-bottom: 2rem;">
+            Manage your ClassSync account preferences and profiles.
+        </p>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages" style="margin-bottom: 2rem;">
+                    {% for message in messages %}
+                        <div class="flash-message" style="background: rgba(34, 197, 94, 0.1); color: #16a34a; border: 1px solid rgba(34, 197, 94, 0.2);">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Student Specific Settings -->
+        {% if current_user.role == 'student' %}
+        <div style="padding-bottom: 2rem; border-bottom: 1px solid var(--border-color); margin-bottom: 2rem;">
+            <h3>Academic Profile</h3>
+            <form method="POST" action="{{ url_for('dashboard.settings') }}" style="margin-top: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">Current Class Section</label>
+                    <input type="text" name="class_section" class="form-control" 
+                           value="{{ current_user.student_profile.class_section if current_user.student_profile and current_user.student_profile.class_section else '' }}" 
+                           placeholder="e.g. Semester 4 - CSE Alpha" required>
+                    <span class="form-helper" style="margin-top: 0.5rem; display: block;">
+                        Keep this up to date to ensure you see the correct timetable and active attendance sessions.
+                    </span>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Update Class Section</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Generic Account Settings -->
+        <div>
+            <h3>Account Access</h3>
+            <p style="color: var(--text-light); margin-top: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem;">
+                Securely sign out of your session on this device.
+            </p>
+            <a href="{{ url_for('auth.logout') }}" class="btn" style="background: #ef4444; color: white;">Logout of ClassSync</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

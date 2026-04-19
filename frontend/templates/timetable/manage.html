@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Timetable - ClassSync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .tt-manage-container { max-width: 1000px; margin: 0 auto; padding: 2rem; }
+        .tt-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .tt-list { margin-top: 3rem; background: var(--card-bg); border-radius: var(--card-radius); border: 1px solid var(--border-color); overflow: hidden; }
+        .tt-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .tt-table th, .tt-table td { padding: 1rem; border-bottom: 1px solid var(--border-color); }
+        .tt-table th { background-color: var(--bg-color); font-weight: 500; color: var(--text-light); font-size: 0.85rem; text-transform: uppercase; }
+        .tt-table tbody tr:hover { background-color: rgba(0,0,0,0.01); }
+        .tt-action-btn { background: none; border: none; font-size: 0.85rem; cursor: pointer; color: var(--text-light); text-decoration: underline; margin-right: 0.5rem; }
+        .tt-action-btn:hover { color: var(--text-dark); }
+        .tt-error-inline { color: #ef4444; font-size: 0.9rem; margin-top: 1rem; display: none; padding: 0.75rem; background: #fee2e2; border-radius: 6px; }
+        .tt-success-inline { color: #16a34a; font-size: 0.9rem; margin-top: 1rem; display: none; padding: 0.75rem; background: #dcfce7; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container" style="padding-bottom: 0;">
+    <div class="dashboard-header">
+        <h1>Manage Timetable</h1>
+        <div class="header-actions" style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{{ url_for('timetable.view_timetable_page') }}" style="color: var(--text-dark);">View Timetable</a>
+            <a href="{{ url_for('dashboard.index') }}" style="color: var(--text-dark);">Dashboard</a>
+            <span style="color: var(--text-light); border-left: 1px solid var(--border-color); padding-left: 1rem;">Role: {{ current_user.role|capitalize }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="tt-manage-container">
+    <div class="auth-card" style="max-width: 100%; box-shadow: none; border: 1px solid var(--border-color);">
+        <h2 class="form-title" id="form-heading">Add New Slot</h2>
+        <p class="form-subtitle">Create or modify timetable entries.</p>
+        
+        <form id="tt-form" onsubmit="submitForm(event)">
+            <input type="hidden" id="slot-id"> <!-- Used for updates -->
+            <div class="tt-form-grid">
+                
+                {% if current_user.role in ['admin', 'hod'] %}
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">Teacher</label>
+                    <select id="teacher_id" class="form-control" required>
+                        <option value="">Select Teacher</option>
+                        {% for teacher in teachers %}
+                        <option value="{{ teacher.id }}">{{ teacher.user.name }} ({{ teacher.designation }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <select id="subject_id" class="form-control" required>
+                        <option value="">Select Subject</option>
+                        {% for subject in subjects %}
+                        <option value="{{ subject.id }}">{{ subject.subject_code }} - {{ subject.subject_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Day of Week</label>
+                    <select id="day_of_week" class="form-control" required>
+                        <option value="">Select Day</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Start Time</label>
+                    <input type="time" id="start_time" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">End Time</label>
+                    <input type="time" id="end_time" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Room Number</label>
+                    <input type="text" id="room_number" class="form-control" placeholder="e.g. 104-A" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Class Section</label>
+                    <input type="text" id="class_section" class="form-control" placeholder="e.g. Semester 4 - CSE Alpha" required>
+                </div>
+            </div>
+            
+            <div id="error-box" class="tt-error-inline"></div>
+            <div id="success-box" class="tt-success-inline"></div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary" id="submit-btn" style="flex: 1;">Create Slot</button>
+                <button type="button" class="btn" style="flex: 1; border: 1px solid var(--border-color); background: transparent;" onclick="resetForm()">Clear</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="tt-list">
+        <table class="tt-table">
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Time</th>
+                    <th>Subject</th>
+                    <th>Class</th>
+                    <th>Room</th>
+                    {% if current_user.role in ['admin', 'hod'] %}<th>Teacher</th>{% endif %}
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tt-tbody">
+                <!-- Fetch injected here -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", loadTable);
+
+    function loadTable() {
+        let endpoint = '/api/timetable/view';
+        {% if current_user.role == 'teacher' %}
+            // If it's a teacher managing their own slots, filter the view appropriately
+            // Assumes backend correctly restricts them just in case.
+            endpoint += '?teacher_id={{ current_user.teacher_profile.id }}'; 
+        {% endif %}
+
+        fetch(endpoint)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('tt-tbody');
+                tbody.innerHTML = '';
+                data.forEach(slot => {
+                    const tr = document.createElement('tr');
+                    let teacherCol = `{% if current_user.role in ['admin', 'hod'] %}<td>${slot.teacher_name}</td>{% endif %}`;
+                    
+                    tr.innerHTML = `
+                        <td>${slot.day_of_week}</td>
+                        <td>${slot.start_time} - ${slot.end_time}</td>
+                        <td>${slot.subject_code}</td>
+                        <td>${slot.class_section}</td>
+                        <td>${slot.room_number}</td>
+                        ${teacherCol}
+                        <td>
+                            <button class="tt-action-btn" onclick='editSlot(${JSON.stringify(slot)})'>Edit</button>
+                            <button class="tt-action-btn" onclick='deleteSlot(${slot.id})' style="color: #ef4444;">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+    }
+
+    function editSlot(slot) {
+        document.getElementById('slot-id').value = slot.id;
+        document.getElementById('subject_id').value = slot.subject_id;
+        document.getElementById('day_of_week').value = slot.day_of_week;
+        document.getElementById('start_time').value = slot.start_time;
+        document.getElementById('end_time').value = slot.end_time;
+        document.getElementById('room_number').value = slot.room_number;
+        document.getElementById('class_section').value = slot.class_section;
+        
+        const teacherSelect = document.getElementById('teacher_id');
+        if(teacherSelect) teacherSelect.value = slot.teacher_id;
+
+        document.getElementById('form-heading').innerText = 'Update Slot';
+        document.getElementById('submit-btn').innerText = 'Save Changes';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('tt-form').reset();
+        document.getElementById('slot-id').value = '';
+        document.getElementById('form-heading').innerText = 'Add New Slot';
+        document.getElementById('submit-btn').innerText = 'Create Slot';
+        document.getElementById('error-box').style.display = 'none';
+        document.getElementById('success-box').style.display = 'none';
+    }
+
+    function deleteSlot(id) {
+        if(confirm("Are you sure you want to delete this slot?")) {
+            fetch(`/api/timetable/delete/${id}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.error) alert(data.error);
+                    else loadTable();
+                });
+        }
+    }
+
+    function submitForm(e) {
+        e.preventDefault();
+        const errBox = document.getElementById('error-box');
+        const sucBox = document.getElementById('success-box');
+        errBox.style.display = 'none';
+        sucBox.style.display = 'none';
+
+        const id = document.getElementById('slot-id').value;
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/timetable/update/${id}` : `/api/timetable/create`;
+
+        const payload = {
+            subject_id: document.getElementById('subject_id').value,
+            day_of_week: document.getElementById('day_of_week').value,
+            start_time: document.getElementById('start_time').value,
+            end_time: document.getElementById('end_time').value,
+            room_number: document.getElementById('room_number').value,
+            class_section: document.getElementById('class_section').value,
+        };
+
+        const teacherSelect = document.getElementById('teacher_id');
+        if(teacherSelect) payload.teacher_id = teacherSelect.value;
+        // if teacherSelect is null, the backend picks up current_user's teacher_id if they are a 'teacher'
+
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json().then(data => ({status: res.status, body: data})))
+        .then(result => {
+            if(result.status >= 400) {
+                errBox.innerText = result.body.error;
+                errBox.style.display = 'block';
+            } else {
+                sucBox.innerText = result.body.message;
+                sucBox.style.display = 'block';
+                resetForm();
+                loadTable();
+                setTimeout(() => { sucBox.style.display = 'none'; }, 3000);
+            }
+        });
+    }
+</script>
+</body>
+</html>

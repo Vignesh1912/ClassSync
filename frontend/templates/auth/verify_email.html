@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassSync - Verify Email</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="auth-centered-layout">
+    <div class="auth-card">
+        <div class="form-header">
+            <div class="shield-icon" style="color: #3B5BFF;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            </div>
+            <h2 class="form-title">Verify your email</h2>
+            <p class="form-subtitle">
+                We've sent a 6-digit code to <strong>{{ email }}</strong>.<br>
+                Enter it below to activate your ClassSync account.
+            </p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="flash-message" style="
+                        padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.75rem; font-size: 0.9rem;
+                        {% if category == 'error' %}
+                            background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;
+                        {% elif category == 'success' %}
+                            background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0;
+                        {% else %}
+                            background: #fef9c3; color: #ca8a04; border: 1px solid #fef08a;
+                        {% endif %}
+                    ">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.verify_email') }}">
+            <div class="form-group">
+                <label class="form-label" for="otp">Verification Code</label>
+                <input type="text" id="otp" name="otp" class="form-control" required
+                       placeholder="123456" maxlength="6" autocomplete="one-time-code"
+                       style="text-align: center; font-size: 1.8rem; letter-spacing: 0.6rem; font-family: monospace; padding: 0.75rem;">
+                <span class="form-helper" style="display: block; text-align: center; margin-top: 0.5rem;">
+                    Enter the 6-digit code from your email exactly as shown.
+                </span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Verify & Sign In</button>
+        </form>
+
+        <div class="form-footer" style="display: flex; flex-direction: column; gap: 0.75rem; align-items: center;">
+            <form method="POST" action="{{ url_for('auth.resend_verification') }}" style="width: 100%;">
+                <input type="hidden" name="email" value="{{ email }}">
+                <button type="submit" id="resend-btn" class="btn" style="width: 100%; background: white; color: #3B5BFF; border: 1.5px solid #3B5BFF; border-radius: 8px; padding: 0.75rem; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s;">
+                    📧 Resend Verification Code
+                </button>
+            </form>
+            <a href="{{ url_for('auth.login') }}" style="color: var(--text-light); font-size: 0.9rem;">← Back to Sign In</a>
+        </div>
+
+        <script>
+            // Cooldown: disable resend button for 30 seconds after page load to prevent spam
+            const resendBtn = document.getElementById('resend-btn');
+            let seconds = 0;
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // If we just resent (flash message visible), start 30s cooldown
+            const flashSuccess = document.querySelector('.flash-message');
+            if (flashSuccess && flashSuccess.innerText.includes('new verification code')) {
+                seconds = 30;
+            }
+
+            if (seconds > 0) {
+                resendBtn.disabled = true;
+                const timer = setInterval(() => {
+                    resendBtn.textContent = `📧 Resend Code (${seconds}s)`;
+                    seconds--;
+                    if (seconds <= 0) {
+                        clearInterval(timer);
+                        resendBtn.disabled = false;
+                        resendBtn.textContent = '📧 Resend Verification Code';
+                    }
+                }, 1000);
+            }
+        </script>

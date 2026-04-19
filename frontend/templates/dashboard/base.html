@@ -1,0 +1,192 @@
+<!-- NEW base.html with sidebar (desktop) + bottom tab bar (mobile) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - ClassSync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body class="app-body">
+
+{% set role = current_user.role if current_user.is_authenticated else '' %}
+
+<!-- ── Sidebar (desktop) ──────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">CS</div>
+        <div>
+            <div class="logo-title">ClassSync</div>
+            <div class="logo-sub">Smart classroom management</div>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard.' + role) if role else '#' }}"
+           class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Dashboard
+        </a>
+        <a href="{{ url_for('timetable.view_timetable_page') }}"
+           class="nav-item {% if 'Timetable' in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Timetable
+        </a>
+
+        <!-- Attendance -->
+        {% if role == 'student' %}
+        <a href="{{ url_for('attendance.mark_attendance_page') }}"
+           class="nav-item {% if 'Attendance' in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+            Attendance
+        </a>
+        {% elif role in ['teacher', 'hod', 'admin'] %}
+        <a href="{{ url_for('attendance.start_attendance_page') }}"
+           class="nav-item {% if 'Attendance' in title and 'Report' not in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+            Attendance
+        </a>
+        {% endif %}
+
+        {% if role == 'student' %}
+        <a href="{{ url_for('assignment.student_assignments_page') }}"
+           class="nav-item {% if 'Assignment' in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Assignments
+        </a>
+        {% elif role in ['teacher', 'hod', 'admin'] %}
+        <a href="{{ url_for('assignment.assignment_dashboard_page') }}"
+           class="nav-item {% if 'Assignment' in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Assignments
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('announcement.announcements_page') }}"
+           class="nav-item {% if 'Announcement' in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Announcements
+            <span id="ann-badge" class="nav-badge" style="display:none;"></span>
+        </a>
+
+        {% if role in ['teacher', 'hod', 'admin'] %}
+        <a href="{{ url_for('attendance.attendance_reports_page') }}"
+           class="nav-item {% if 'Report' in title or 'Attendance' in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Reports
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('assignment.profile_page') }}"
+           class="nav-item {% if 'Profile' in title %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+            Profile
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="user-avatar">{{ current_user.name[0]|upper if current_user.is_authenticated else '?' }}</div>
+            <div class="user-info">
+                <div class="user-name">{{ current_user.name if current_user.is_authenticated else 'Guest' }}</div>
+                <div class="user-role">{{ role|capitalize }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Logout">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </a>
+    </div>
+</aside>
+
+<!-- ── Main content ───────────────────────────────────────────────────────── -->
+<div class="app-main">
+    <!-- Top bar (mobile header) -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="logo-icon sm">CS</div>
+            <span class="topbar-title">{{ title }}</span>
+        </div>
+        <div class="topbar-right">
+            <a href="{{ url_for('announcement.announcements_page') }}" class="topbar-icon-btn" style="position:relative;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span id="ann-badge-mobile" class="topbar-badge" style="display:none;"></span>
+            </a>
+            <div class="topbar-role">{{ role|upper }}</div>
+            <div class="topbar-user">
+                <div class="user-avatar sm">{{ current_user.name[0]|upper if current_user.is_authenticated else '?' }}</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="app-content">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for msg in messages %}
+            <div class="flash-message">{{ msg }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<!-- ── Bottom tab bar (mobile only) ─────────────────────────────────────────── -->
+<nav class="bottom-nav">
+    <a href="{{ url_for('dashboard.' + role) if role else '#' }}" class="bottom-nav-item {% if title == 'Dashboard' %}active{% endif %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('timetable.view_timetable_page') }}" class="bottom-nav-item {% if 'Timetable' in title %}active{% endif %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" height="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Timetable</span>
+    </a>
+    <!-- Attendance (Bottom Nav) -->
+    <a href="{{ url_for('attendance.mark_attendance_page') if role == 'student' else url_for('attendance.start_attendance_page') }}" class="bottom-nav-item {% if 'Attendance' in title and 'Report' not in title %}active{% endif %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+        <span>Attend</span>
+    </a>
+    {% if role == 'student' %}
+    <a href="{{ url_for('assignment.student_assignments_page') }}" class="bottom-nav-item {% if 'Assignment' in title %}active{% endif %}">
+    {% else %}
+    <a href="{{ url_for('assignment.assignment_dashboard_page') }}" class="bottom-nav-item {% if 'Assignment' in title %}active{% endif %}">
+    {% endif %}
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Tasks</span>
+    </a>
+    <a href="{{ url_for('announcement.announcements_page') }}" class="bottom-nav-item {% if 'Announcement' in title %}active{% endif %}" style="position:relative;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="ann-badge-bottom" class="bottom-badge" style="display:none;"></span>
+        <span>Notice</span>
+    </a>
+    <a href="{{ url_for('assignment.profile_page') }}" class="bottom-nav-item {% if 'Profile' in title %}active{% endif %}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+        <span>Profile</span>
+    </a>
+</nav>
+
+<script>
+// Unread announcement badge
+function refreshAnnBadge() {
+    fetch('/api/announcements/unread-count')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            var c = d.count || 0;
+            ['ann-badge','ann-badge-mobile','ann-badge-bottom'].forEach(function(id){
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = c;
+                el.style.display = c > 0 ? 'flex' : 'none';
+            });
+        }).catch(function(){});
+}
+refreshAnnBadge();
+setInterval(refreshAnnBadge, 30000);
+</script>
+</body>
+</html>

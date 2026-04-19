@@ -1,0 +1,136 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto; padding: 1.5rem;">
+    <!-- Top Bar / Header -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: rgba(59,91,255,0.1); color: #3B5BFF; text-transform: uppercase;">{{ subject.subject_name if subject else 'Unknown' }}</span>
+                <span style="font-size: 0.82rem; color: var(--text-light);">Posted by Prof. {{ teacher.user.name.split()[-1] if teacher and teacher.user else 'Teacher' }}</span>
+            </div>
+            <h1 style="font-size: 1.8rem; font-weight: 800; color: var(--text-dark); margin: 0;">{{ assignment.title }}</h1>
+        </div>
+        <a href="{{ url_for('assignment.student_assignments_page') }}" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; font-weight: 600; color: #3B5BFF; text-decoration: none; padding: 6px 14px; border-radius: 8px; background: #fff; border: 1px solid var(--border-color);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            Back to list
+        </a>
+    </div>
+
+    <!-- Main Content Card -->
+    <div style="background: #fff; border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+            <div>
+                <div style="font-size: 0.88rem; color: var(--text-light); font-weight: 500; margin-bottom: 0.25rem;">Deadline</div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: #0f172a;">{{ assignment.deadline.strftime('%m/%d/%Y, %I:%M:%S %p') }}</div>
+                
+                {% if submission.status != 'submitted' %}
+                    {% set diff = assignment.deadline - datetime_now %}
+                    {% if diff.total_seconds() > 0 %}
+                        <div style="display: inline-block; margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #dbeafe; color: #1e40af;">
+                            {{ (diff.days) }} DAYS {{ (diff.seconds // 3600) }} HOURS REMAINING
+                        </div>
+                    {% else %}
+                        <div style="display: inline-block; margin-top: 0.5rem; font-size: 0.75rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #fee2e2; color: #991b1b;">
+                            OVERDUE
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Action Button -->
+            <div>
+                {% if submission.status == 'submitted' %}
+                    <div style="display: flex; align-items: center; gap: 0.5rem; background: #f0fdf4; color: #166534; padding: 10px 20px; border-radius: 10px; border: 1px solid #bbf7d0; font-weight: 600; font-size: 0.95rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Submitted
+                    </div>
+                {% else %}
+                    <button id="submit-btn" onclick="submitAssignment({{ assignment.id }})" style="display: flex; align-items: center; gap: 0.5rem; background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(37,99,235,0.2);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>
+                        Mark as Submitted
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div style="margin-bottom: 2rem;">
+            <div style="font-weight: 600; font-size: 0.95rem; color: #475569; margin-bottom: 0.5rem;">Description</div>
+            <div style="color: #1e293b; line-height: 1.6; font-size: 0.98rem; white-space: pre-wrap;">{{ assignment.description or 'No description provided.' }}</div>
+        </div>
+
+        <!-- Resources Section -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Question Paper -->
+            <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; background: #fff;">
+                <div>
+                    <div style="font-size: 0.88rem; color: var(--text-light); margin-bottom: 0.5rem;">Question paper</div>
+                    {% if assignment.resource_path %}
+                        <div style="font-weight: 600; color: #0f172a; margin-bottom: 0.25rem;">{{ assignment.resource_path.split('/')[-1] }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-light);">PDF Resource</div>
+                    {% else %}
+                        <div style="font-style: italic; color: var(--text-light);">No file attached.</div>
+                    {% endif %}
+                </div>
+                {% if assignment.resource_path %}
+                    <a href="{{ url_for('assignment.serve_upload', filename=assignment.resource_path) }}" target="_blank" style="margin-top: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; color: #1e293b; font-size: 0.88rem; font-weight: 600; text-decoration: none; background: #f8fafc;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Download PDF
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Google Classroom -->
+            <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; background: #fff;">
+                <div>
+                    <div style="font-size: 0.88rem; color: var(--text-light); margin-bottom: 0.5rem;">Google Classroom</div>
+                    <div style="font-weight: 600; color: #0f172a; margin-bottom: 0.25rem;">Submit your work on Google Classroom.</div>
+                </div>
+                {% if assignment.classroom_link %}
+                    <a href="{{ assignment.classroom_link }}" target="_blank" style="margin-top: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 10px; border-radius: 8px; background: #2563eb; color: #fff; font-size: 0.88rem; font-weight: 600; text-decoration: none; box-shadow: 0 4px 6px rgba(37,99,235,0.15);">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        Open Google Classroom
+                    </a>
+                {% else %}
+                    <div style="margin-top: 1.5rem; text-align: center; color: var(--text-light); font-size: 0.88rem;">No link provided.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reminders Sent -->
+        <div>
+            <div style="font-weight: 600; font-size: 0.9rem; color: #475569; margin-bottom: 0.75rem;">Reminders sent</div>
+            <div style="display: flex; gap: 0.5rem;">
+                <span style="font-size: 0.75rem; font-weight: 600; width: 28px; height: 28px; border-radius: 50%; background: #eff6ff; color: #1e3a8a; display: flex; align-items: center; justify-content: center; border: 1px solid #bfdbfe;">3d</span>
+                <span style="font-size: 0.75rem; font-weight: 600; width: 28px; height: 28px; border-radius: 50%; background: #eff6ff; color: #1e3a8a; display: flex; align-items: center; justify-content: center; border: 1px solid #bfdbfe;">2d</span>
+                <span style="font-size: 0.75rem; font-weight: 600; width: 28px; height: 28px; border-radius: 50%; background: #eff6ff; color: #1e3a8a; display: flex; align-items: center; justify-content: center; border: 1px solid #bfdbfe;">1d</span>
+                <span style="font-size: 0.75rem; font-weight: 600; width: 36px; height: 28px; border-radius: 14px; background: #eff6ff; color: #1e3a8a; display: flex; align-items: center; justify-content: center; border: 1px solid #bfdbfe;">today</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function submitAssignment(id) {
+    const btn = document.getElementById('submit-btn');
+    if (btn) btn.disabled = true;
+
+    fetch('/api/assignments/mark-submitted', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ assignment_id: id })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.message && btn) {
+            btn.outerHTML = `<div style="display: flex; align-items: center; gap: 0.5rem; background: #f0fdf4; color: #166534; padding: 10px 20px; border-radius: 10px; border: 1px solid #bbf7d0; font-weight: 600; font-size: 0.95rem;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                Submitted
+                             </div>`;
+        }
+    })
+    .catch(() => { if (btn) btn.disabled = false; });
+}
+</script>
+{% endblock %}

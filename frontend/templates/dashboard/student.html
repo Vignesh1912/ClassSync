@@ -1,0 +1,315 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+{% set student = current_user.student_profile %}
+
+<!-- ── Greeting card ──────────────────────────────────────────── -->
+<div class="cs-card" style="margin-bottom:1.25rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+        <div>
+            <div style="font-size:.9rem;color:#94a3b8;margin-bottom:.25rem;" id="greeting-text">Good morning,</div>
+            <div style="font-size:2rem;font-weight:800;color:#1a1a2e;line-height:1.1;">{{ current_user.name.split()[0] }}</div>
+            <div style="font-size:.82rem;color:#64748b;margin-top:.4rem;">Let's keep today on track — classes, attendance, and deadlines.</div>
+            <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.85rem;">
+                {% if student and student.class_section %}
+                <span style="font-size:.75rem;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 10px;border-radius:999px;color:#475569;font-weight:500;">{{ student.class_section }}</span>
+                {% endif %}
+                <span style="font-size:.75rem;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 10px;border-radius:999px;color:#475569;font-weight:500;">{{ current_user.department or 'No dept' }}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem;">
+                <span style="font-size:.73rem;color:#94a3b8;">ID: {{ current_user.college_user_id }}</span>
+                <span style="font-size:.73rem;color:#94a3b8;">·</span>
+                <span style="font-size:.73rem;color:#94a3b8;">{{ current_user.department or '' }}</span>
+            </div>
+        </div>
+        <!-- Quick actions -->
+        <div style="min-width:200px;">
+            <div style="font-size:.78rem;font-weight:600;color:#94a3b8;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.6rem;">Quick Actions</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+                <a href="{{ url_for('attendance.mark_attendance_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">Attendance</a>
+                <a href="{{ url_for('assignment.student_assignments_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">Assignments</a>
+                <a href="{{ url_for('announcement.announcements_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">Announcements</a>
+                <a href="{{ url_for('timetable.view_timetable_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">Timetable</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Active Session Card (Dedicated Panel) ──────────────────── -->
+<div class="cs-card" id="active-session-card" style="display:none;margin-bottom:1.25rem;border-color:#86efac;background:#f0fdf4;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;">
+        <div>
+            <div style="font-size:.75rem;font-weight:700;color:#16a34a;display:flex;align-items:center;gap:.35rem;margin-bottom:.2rem;">
+                <span class="pulse-dot" style="width:8px;height:8px;background:#16a34a;border-radius:50%;display:inline-block;"></span>
+                Attendance Session Active
+            </div>
+            <div id="active-session-info" style="font-size:.88rem;color:#166534;font-weight:600;"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="text-align:right;">
+                <div style="font-size:.65rem;color:#166534;font-weight:700;text-transform:uppercase;">Time Left</div>
+                <div id="session-timer" style="font-size:1.2rem;color:#1a1a2e;font-weight:800;font-variant-numeric:tabular-nums;">--:--</div>
+            </div>
+            <a href="{{ url_for('attendance.mark_attendance_page') }}" class="btn-sm primary" style="font-size:.82rem;background:#16a34a;border-color:#16a34a;">📍 Mark Attendance</a>
+        </div>
+    </div>
+</div>
+
+<!-- ── Quick Stats Grid ──────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1.25rem;margin-bottom:1.25rem;">
+    <div class="cs-card" style="display:flex;align-items:center;gap:1rem;background:#ffffff;border-bottom:3px solid #10b981;">
+        <div style="background:#d1fae5;padding:.6rem;border-radius:10px;color:#10b981;font-size:1.25rem;">📊</div>
+        <div>
+            <div style="font-size:.7rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Attendance Metric</div>
+            <div style="font-size:1.25rem;font-weight:800;color:#1a1a2e;" id="stat-attendance">Good</div>
+        </div>
+    </div>
+    <div class="cs-card" style="display:flex;align-items:center;gap:1rem;background:#ffffff;border-bottom:3px solid #3B5BFF;">
+        <div style="background:#f0f4ff;padding:.6rem;border-radius:10px;color:#3B5BFF;font-size:1.25rem;">📝</div>
+        <div>
+            <div style="font-size:.7rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Pending Tasks</div>
+            <div style="font-size:1.25rem;font-weight:800;color:#1a1a2e;" id="stat-tasks">--</div>
+        </div>
+    </div>
+    <div class="cs-card" style="display:flex;align-items:center;gap:1rem;background:#ffffff;border-bottom:3px solid #f59e0b;">
+        <div style="background:#fef3c7;padding:.6rem;border-radius:10px;color:#f59e0b;font-size:1.25rem;">🔔</div>
+        <div>
+            <div style="font-size:.7rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Recent Notices</div>
+            <div style="font-size:1.25rem;font-weight:800;color:#1a1a2e;" id="stat-notices">--</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Two-column grid ─────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 320px;gap:1.25rem;align-items:start;">
+
+    <!-- Left: Upcoming Assignments -->
+    <div>
+        <div class="cs-card" style="margin-bottom:1.25rem;">
+            <div class="section-header">
+                <div>
+                    <div class="cs-card-title">Upcoming Assignments</div>
+                    <div class="cs-card-sub">Sorted by deadline</div>
+                </div>
+                <a href="{{ url_for('assignment.student_assignments_page') }}" class="view-all">View all →</a>
+            </div>
+            <div id="assign-list">
+                <div style="color:#94a3b8;font-size:.85rem;padding:.5rem 0;">Loading…</div>
+            </div>
+        </div>
+
+        <!-- Attendance Overview -->
+        <div class="cs-card">
+            <div class="section-header">
+                <div>
+                    <div class="cs-card-title">Attendance Overview</div>
+                    <div class="cs-card-sub">Per subject breakdown</div>
+                </div>
+            </div>
+            <div id="att-loading" style="color:#94a3b8;font-size:.85rem;padding:.5rem 0;">Loading…</div>
+            <div id="att-empty" style="display:none;text-align:center;color:#94a3b8;padding:1.5rem;font-size:.88rem;">No attendance records yet.</div>
+            <div id="att-grid" style="display:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.85rem;"></div>
+        </div>
+    </div>
+
+    <!-- Right: Class Profile + Recent Announcements -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <!-- Recent announcements -->
+        <div class="cs-card">
+            <div class="section-header">
+                <div class="cs-card-title">Recent Announcements</div>
+                <a href="{{ url_for('announcement.announcements_page') }}" class="view-all">All →</a>
+            </div>
+            <div id="recent-ann-list" style="display:flex;flex-direction:column;gap:.6rem;">
+                <div style="color:#94a3b8;font-size:.82rem;">Loading…</div>
+            </div>
+        </div>
+
+        <!-- Class section update -->
+        <div class="cs-card">
+            <div class="cs-card-title" style="margin-bottom:.15rem;">Class Section</div>
+            <div class="cs-card-sub" style="margin-bottom:.85rem;">Set your class to get the correct timetable & attendance sessions</div>
+            <form method="POST" action="{{ url_for('dashboard.student') }}">
+                <input type="text" name="class_section" class="form-control"
+                       value="{{ student.class_section if student and student.class_section else '' }}"
+                       placeholder="e.g. SE-A or TY-CSE-B" style="font-size:.85rem;padding:.55rem .9rem;margin-bottom:.6rem;">
+                <button type="submit" class="btn-sm primary" style="width:100%;justify-content:center;font-size:.82rem;">Update Section</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Greeting by time
+(function() {
+    const h = new Date().getHours();
+    const g = h < 12 ? 'Good morning,' : h < 17 ? 'Good afternoon,' : 'Good evening,';
+    document.getElementById('greeting-text').textContent = g;
+})();
+
+// ── Assignments ──────────────────────────────────────────────────────────────
+fetch('/api/assignments/list')
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('assign-list');
+        const allAssignments = Array.isArray(data) ? data : [];
+        const upcoming = allAssignments.filter(a => a.status !== 'submitted');
+        document.getElementById('stat-tasks').textContent = upcoming.length;
+        
+        const listItems = upcoming.slice(0, 4);
+        if (!listItems.length) {
+            el.innerHTML = '<div style="color:#94a3b8;font-size:.85rem;padding:.5rem 0;">No pending assignments 🎉</div>';
+            return;
+        }
+        el.innerHTML = '';
+        listItems.forEach(a => {
+            const statusMap = {
+                overdue:   { label:'OVERDUE',  cls:'badge-overdue' },
+                pending:   { label:'UPCOMING', cls:'badge-upcoming' },
+                submitted: { label:'SUBMITTED',cls:'badge-submitted' }
+            };
+            const s = statusMap[a.status] || statusMap.pending;
+            const due = new Date(a.deadline);
+            const now = new Date();
+            const h = Math.round((due - now) / 36e5);
+            const dueStr = h < 0 ? `${Math.abs(h)}h late` : `Due in ${h}h`;
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;padding:.75rem;border-radius:10px;border:1px solid #f0f0f5;margin-bottom:.5rem;cursor:pointer;';
+            row.innerHTML = `
+                <div>
+                    <div style="font-weight:600;font-size:.85rem;color:#1a1a2e;">${a.title}</div>
+                    <div style="font-size:.75rem;color:#94a3b8;margin-top:2px;">${a.subject_name || ''}</div>
+                    <div style="font-size:.75rem;color:${h<0?'#dc2626':'#475569'};margin-top:3px;font-weight:500;">${dueStr}</div>
+                </div>
+                <span class="status-badge ${s.cls}" style="font-size:.65rem;">${s.label}</span>`;
+            row.onclick = () => { window.location.href = "{{ url_for('assignment.student_assignments_page') }}"; };
+            el.appendChild(row);
+        });
+    }).catch(() => {
+        document.getElementById('assign-list').innerHTML = '<div style="color:#94a3b8;font-size:.85rem;">Failed to load.</div>';
+    });
+
+// ── Recent announcements ─────────────────────────────────────────────────────
+fetch('/api/announcements/list')
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('recent-ann-list');
+        const allAnn = Array.isArray(data) ? data : [];
+        document.getElementById('stat-notices').textContent = allAnn.length;
+        
+        const recent = allAnn.slice(0, 4);
+        if (!recent.length) {
+            el.innerHTML = '<div style="color:#94a3b8;font-size:.82rem;">No announcements yet.</div>';
+            return;
+        }
+        el.innerHTML = '';
+        const pCls = { urgent:'badge-urgent', important:'badge-important', normal:'badge-normal' };
+        recent.forEach(a => {
+            const item = document.createElement('a');
+            item.href = "{{ url_for('announcement.announcements_page') }}";
+            item.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;padding:.55rem 0;border-bottom:1px solid #f4f5f7;text-decoration:none;';
+            const d = new Date(a.created_at);
+            const diffH = Math.round((Date.now()-d)/36e5);
+            const dStr = diffH < 24 ? diffH + ' hrs ago' : Math.floor(diffH/24) + ' days ago';
+            item.innerHTML = `
+                <div>
+                    <div style="font-size:.82rem;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">${a.title}</div>
+                    <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">${dStr}</div>
+                </div>
+                <span class="priority-badge ${pCls[a.priority]||'badge-normal'}" style="font-size:.6rem;flex-shrink:0;">${a.priority.toUpperCase()}</span>`;
+            el.appendChild(item);
+        });
+    }).catch(() => {});
+
+// ── Attendance ─────────────────────────────────────────────────────────────────
+const studentId = {{ student.id if student else 'null' }};
+if (studentId) {
+    fetch('/api/attendance/student-stats/' + studentId)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('att-loading').style.display = 'none';
+            if (!Array.isArray(data)||!data.length) { document.getElementById('att-empty').style.display='block'; return; }
+            
+            // Calculate average attendance for top stat bar
+            const totalPct = data.reduce((sum, s) => sum + s.percentage, 0);
+            const avgPct = Math.round(totalPct / data.length);
+            document.getElementById('stat-attendance').textContent = avgPct + '%';
+
+            const grid = document.getElementById('att-grid');
+            grid.style.display = 'grid';
+            data.forEach(s => {
+                const fc = {green:'#22c55e',yellow:'#eab308',red:'#ef4444'}[s.flag]||'#64748b';
+                const bc = {green:{bg:'#dcfce7',c:'#16a34a',label:'Good'},yellow:{bg:'#fef9c3',c:'#ca8a04',label:'Warning'},red:{bg:'#fee2e2',c:'#dc2626',label:'At Risk'}}[s.flag]||{bg:'#f1f5f9',c:'#64748b',label:'N/A'};
+                const card = document.createElement('div');
+                card.style.cssText = 'border:1px solid #e8eaf0;border-radius:12px;padding:1rem;background:#fff;';
+                card.innerHTML = `
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem;">
+                        <div style="font-weight:600;font-size:.85rem;color:#1a1a2e;">${s.subject_name}</div>
+                        <span style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:999px;background:${bc.bg};color:${bc.c};">${bc.label}</span>
+                    </div>
+                    <div style="font-size:1.5rem;font-weight:800;color:${fc};margin-bottom:.4rem;">${s.percentage}%</div>
+                    <div style="height:6px;background:#f1f5f9;border-radius:999px;overflow:hidden;margin-bottom:.4rem;">
+                        <div style="height:100%;width:${s.percentage}%;background:${fc};border-radius:999px;"></div>
+                    </div>
+                    <div style="font-size:.72rem;color:#94a3b8;">${s.attended}/${s.total_sessions} classes</div>`;
+                grid.appendChild(card);
+            });
+        }).catch(() => {
+            document.getElementById('att-loading').textContent = 'Could not load attendance.';
+        });
+} else {
+    document.getElementById('att-loading').textContent = 'Set your class section above to see attendance.';
+}
+
+// ── Active Session Polling ──────────────────────────────────────────────────
+let sessionInterval;
+function fetchActiveSession() {
+    fetch('/api/attendance/active-sessions')
+        .then(r => r.json())
+        .then(sessions => {
+            const card = document.getElementById('active-session-card');
+            const info = document.getElementById('active-session-info');
+            const timer = document.getElementById('session-timer');
+            
+            if (sessions && sessions.length > 0) {
+                const s = sessions[0];
+                card.style.display = 'block';
+                info.textContent = `${s.subject_name} in ${s.classroom_name}`;
+                
+                if (window.studentCountdownInterval) clearInterval(window.studentCountdownInterval);
+                const end = new Date(s.end_time_limit + 'Z').getTime();
+                
+                window.studentCountdownInterval = setInterval(() => {
+                    const diff = end - Date.now();
+                    if (diff < 0) {
+                        clearInterval(window.studentCountdownInterval);
+                        timer.textContent = "00:00";
+                        fetchActiveSession();
+                    } else {
+                        const m = Math.floor((diff % 36e5) / 6e4);
+                        const sec = Math.floor((diff % 6e4) / 1000);
+                        timer.textContent = `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+                    }
+                }, 1000);
+            } else {
+                card.style.display = 'none';
+                if (window.studentCountdownInterval) clearInterval(window.studentCountdownInterval);
+            }
+        }).catch(() => {});
+}
+fetchActiveSession();
+setInterval(fetchActiveSession, 15000);
+</script>
+
+<style>
+@media (max-width: 700px) {
+    /* Stack to single column on mobile */
+    div[style*="grid-template-columns:1fr 320px"] {
+        grid-template-columns: 1fr !important;
+    }
+    div[style*="grid-template-columns:1fr 320px"] > div:last-child {
+        order: -1; /* announcements & class section above on mobile */
+    }
+}
+</style>
+{% endblock %}

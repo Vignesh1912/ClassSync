@@ -1,0 +1,59 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div style="max-width: 720px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <h2 style="font-size:1.3rem;font-weight:700;margin:0;">Notifications</h2>
+        <button onclick="markAllRead()"
+            style="padding:.45rem 1rem;border-radius:8px;background:#f1f5f9;color:var(--text-dark);font-size:.82rem;font-weight:600;border:1px solid var(--border-color);cursor:pointer;">
+            Mark all as read
+        </button>
+    </div>
+
+    <div id="notif-loading" style="color:var(--text-light);font-size:.9rem;">Loading notifications…</div>
+    <div id="notif-empty" style="display:none;text-align:center;color:var(--text-light);padding:3rem;background:#f8fafc;border-radius:12px;border:1px solid var(--border-color);">
+        No notifications yet.
+    </div>
+    <div id="notif-list" style="display:flex;flex-direction:column;gap:.6rem;"></div>
+</div>
+
+<script>
+function timeAgo(iso) {
+    const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+}
+
+fetch('/api/notifications/list')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('notif-loading').style.display = 'none';
+        if (!data.length) { document.getElementById('notif-empty').style.display = 'block'; return; }
+        const list = document.getElementById('notif-list');
+        data.forEach(n => {
+            const row = document.createElement('div');
+            row.style.cssText = `border:1px solid var(--border-color);border-radius:10px;padding:1rem 1.15rem;background:${n.is_read ? '#fff' : '#f0f4ff'};`;
+            row.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+                    <div style="font-weight:${n.is_read ? '500' : '700'};font-size:.93rem;color:var(--text-dark);">${n.title}</div>
+                    <span style="flex-shrink:0;font-size:.75rem;color:var(--text-light);">${timeAgo(n.created_at)}</span>
+                </div>
+                <div style="font-size:.85rem;color:var(--text-light);margin-top:.35rem;">${n.message}</div>`;
+            list.appendChild(row);
+        });
+    });
+
+function markAllRead() {
+    fetch('/api/notifications/mark-all-read', { method: 'POST' })
+        .then(() => {
+            // Update bell badge in nav
+            const badge = document.getElementById('notif-unread-badge');
+            if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+            // Reload the page to visually update bold/bg
+            location.reload();
+        });
+}
+</script>
+{% endblock %}

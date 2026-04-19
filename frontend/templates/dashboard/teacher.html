@@ -1,0 +1,180 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<!-- ── Greeting card ──────────────────────────────────────────── -->
+<div class="cs-card" style="margin-bottom:1.25rem;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+        <div>
+            <div style="font-size:.9rem;color:#94a3b8;margin-bottom:.25rem;" id="greeting-text">Good morning,</div>
+            <div style="font-size:2rem;font-weight:800;color:#1a1a2e;line-height:1.1;">{{ current_user.name }}</div>
+            <div style="font-size:.82rem;color:#64748b;margin-top:.4rem;">Manage your classes, track attendance, and create assignments.</div>
+            <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.85rem;">
+                <span style="font-size:.75rem;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 10px;border-radius:999px;color:#475569;font-weight:500;">{{ current_user.department or 'Faculty' }}</span>
+                <span style="font-size:.75rem;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 10px;border-radius:999px;color:#475569;font-weight:500;">{{ current_user.role|upper }}</span>
+            </div>
+        </div>
+        <!-- Quick actions -->
+        <div style="min-width:220px;">
+            <div style="font-size:.78rem;font-weight:600;color:#94a3b8;letter-spacing:.05em;text-transform:uppercase;margin-bottom:.6rem;">Quick Actions</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+                <a href="{{ url_for('attendance.start_attendance_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">Start Class</a>
+                <a href="{{ url_for('assignment.create_assignment_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">+ Assignment</a>
+                <a href="{{ url_for('announcement.announcements_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">Notify</a>
+                <a href="{{ url_for('timetable.manage_timetable_page') }}" class="btn-sm ghost" style="justify-content:center;font-size:.75rem;">Timetable</a>
+            </div>
+<!-- ── Quick Stats Grid ──────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:1.25rem;margin-bottom:1.25rem;">
+    <div class="cs-card" style="display:flex;align-items:center;gap:1rem;background:#ffffff;border-bottom:3px solid #3B5BFF;">
+        <div style="background:#f0f4ff;padding:.6rem;border-radius:10px;color:#3B5BFF;font-size:1.25rem;">📊</div>
+        <div>
+            <div style="font-size:.7rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Overall Admin</div>
+            <div style="font-size:1.25rem;font-weight:800;color:#1a1a2e;">Active</div>
+        </div>
+    </div>
+    <div class="cs-card" style="display:flex;align-items:center;gap:1rem;background:#ffffff;border-bottom:3px solid #10b981;">
+        <div style="background:#d1fae5;padding:.6rem;border-radius:10px;color:#10b981;font-size:1.25rem;">📝</div>
+        <div>
+            <div style="font-size:.7rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Assignments</div>
+            <div style="font-size:1.25rem;font-weight:800;color:#1a1a2e;" id="stat-assignments">--</div>
+        </div>
+    </div>
+    <div class="cs-card" style="display:flex;align-items:center;gap:1rem;background:#ffffff;border-bottom:3px solid #f59e0b;">
+        <div style="background:#fef3c7;padding:.6rem;border-radius:10px;color:#f59e0b;font-size:1.25rem;">🔔</div>
+        <div>
+            <div style="font-size:.7rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Recent notices</div>
+            <div style="font-size:1.25rem;font-weight:800;color:#1a1a2e;" id="stat-notices">--</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Two-column grid ─────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 320px;gap:1.25rem;align-items:start;">
+
+    <!-- Left: Assignments & Activity -->
+    <div>
+        <div class="cs-card" style="margin-bottom:1.25rem;">
+            <div class="section-header">
+                <div>
+                    <div class="cs-card-title">Your Assignments</div>
+                    <div class="cs-card-sub">Created by you</div>
+                </div>
+                <a href="{{ url_for('assignment.assignment_dashboard_page') }}" class="view-all">Dashboard →</a>
+            </div>
+            <div id="assign-list">
+                <div style="color:#94a3b8;font-size:.85rem;padding:.5rem 0;">Loading assignments…</div>
+            </div>
+        </div>
+
+        <div class="cs-card">
+            <div class="section-header">
+                <div>
+                    <div class="cs-card-title">Class Attendance overview</div>
+                    <div class="cs-card-sub">Quick Department Health</div>
+                </div>
+            </div>
+            <div style="color:#94a3b8;font-size:.85rem;padding:1.5rem;text-align:center;border:1px dashed #e2e8f0;border-radius:12px;">
+                <div style="font-size:1.5rem;margin-bottom:.5rem;">📊</div>
+                <div>Use the <strong>Reports</strong> tab to view detailed attendance grids & metrics for your classes.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Announcements -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div class="cs-card">
+            <div class="section-header">
+                <div class="cs-card-title">Recent Announcements</div>
+                <a href="{{ url_for('announcement.announcements_page') }}" class="view-all">All →</a>
+            </div>
+            <div id="recent-ann-list" style="display:flex;flex-direction:column;gap:.6rem;">
+                <div style="color:#94a3b8;font-size:.82rem;">Loading…</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Greeting by time
+(function() {
+    const h = new Date().getHours();
+    const g = h < 12 ? 'Good morning,' : h < 17 ? 'Good afternoon,' : 'Good evening,';
+    document.getElementById('greeting-text').textContent = g;
+})();
+
+// ── Teacher's Assignments Creation List ─────────────────────────────────────
+fetch('/api/assignments/list')
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('assign-list');
+        const allAssignments = Array.isArray(data) ? data : [];
+        document.getElementById('stat-assignments').textContent = allAssignments.length;
+        
+        const assignments = allAssignments.slice(0, 5);
+        if (!assignments.length) {
+            el.innerHTML = '<div style="color:#94a3b8;font-size:.85rem;padding:.5rem 0;">No assignments created yet.</div>';
+            return;
+        }
+        el.innerHTML = '';
+        assignments.forEach(a => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:.75rem;border-radius:10px;border:1px solid #f0f0f5;margin-bottom:.5rem;cursor:pointer;';
+            row.innerHTML = `
+                <div>
+                    <div style="font-weight:600;font-size:.85rem;color:#1a1a2e;">${a.title}</div>
+                    <div style="font-size:.75rem;color:#94a3b8;margin-top:2px;">${a.subject_name || ''}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:.8rem;font-weight:700;color:#2563eb;">${a.submission_count || 0} Subs</div>
+                    <div style="font-size:.68rem;color:#94a3b8;margin-top:2px;">Due in ${Math.round((new Date(a.deadline) - Date.now()) / 36e5)}h</div>
+                </div>`;
+            row.onclick = () => { window.location.href = "{{ url_for('assignment.assignment_dashboard_page') }}"; };
+            el.appendChild(row);
+        });
+    }).catch(() => {
+        document.getElementById('assign-list').innerHTML = '<div style="color:#94a3b8;font-size:.85rem;">Failed to load.</div>';
+    });
+
+// ── Shared Recent announcements ─────────────────────────────────────────────────────
+fetch('/api/announcements/list')
+    .then(r => r.json())
+    .then(data => {
+        const el = document.getElementById('recent-ann-list');
+        const allAnn = Array.isArray(data) ? data : [];
+        document.getElementById('stat-notices').textContent = allAnn.length;
+        
+        const recent = allAnn.slice(0, 4);
+        if (!recent.length) {
+            el.innerHTML = '<div style="color:#94a3b8;font-size:.82rem;">No announcements yet.</div>';
+            return;
+        }
+        el.innerHTML = '';
+        const pCls = { urgent:'badge-urgent', important:'badge-important', normal:'badge-normal' };
+        recent.forEach(a => {
+            const item = document.createElement('a');
+            item.href = "{{ url_for('announcement.announcements_page') }}";
+            item.style.cssText = 'display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;padding:.55rem 0;border-bottom:1px solid #f4f5f7;text-decoration:none;';
+            const d = new Date(a.created_at);
+            const diffH = Math.round((Date.now()-d)/36e5);
+            const dStr = diffH < 24 ? diffH + ' hrs ago' : Math.floor(diffH/24) + ' days ago';
+            item.innerHTML = `
+                <div>
+                    <div style="font-size:.82rem;font-weight:600;color:#1a1a2e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">${a.title}</div>
+                    <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">${dStr}</div>
+                </div>
+                <span class="priority-badge ${pCls[a.priority]||'badge-normal'}" style="font-size:.6rem;flex-shrink:0;">${a.priority.toUpperCase()}</span>`;
+            el.appendChild(item);
+        });
+    }).catch(() => {});
+</script>
+
+<style>
+@media (max-width: 700px) {
+    div[style*="grid-template-columns:1fr 320px"] {
+        grid-template-columns: 1fr !important;
+    }
+    div[style*="grid-template-columns:1fr 320px"] > div:last-child {
+        order: -1;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable - ClassSync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .tt-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .tt-grid { 
+            display: grid; 
+            grid-template-columns: 80px repeat(5, 1fr); 
+            gap: 10px; 
+            margin-top: 2rem;
+        }
+        .tt-header { font-weight: 600; text-align: center; padding: 1rem; background: var(--card-bg); border-radius: 8px 8px 0 0; border: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+        .tt-time-col { display: flex; flex-direction: column; gap: 10px; padding-top: 60px; }
+        .tt-time-label { height: 80px; text-align: right; padding-right: 15px; font-size: 0.85rem; color: var(--text-light); position: relative; }
+        .tt-time-label::after { content: ''; position: absolute; right: 0; top: 10px; width: 10px; border-top: 1px solid var(--border-color); }
+        
+        .tt-day-col { display: flex; flex-direction: column; position: relative; border-right: 1px solid var(--border-color); }
+        .tt-day-col:last-child { border-right: none; }
+        .tt-day-bg { position: absolute; top: 60px; bottom: 0; left: 0; right: 0; z-index: -1; background-size: 100% 90px; background-image: linear-gradient(to bottom, #F0F0F0 1px, transparent 1px); opacity: 1; margin-top: 10px; }
+        
+        .tt-slot { 
+            position: absolute; 
+            left: 0; right: 0; 
+            border-radius: 6px; 
+            padding: 8px 12px; 
+            font-size: 0.85rem; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            overflow: hidden; 
+            border-left: 4px solid rgba(0,0,0,0.1);
+        }
+        .tt-slot-title { font-weight: 600; margin-bottom: 4px; display: block; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .tt-slot-meta { font-size: 0.75rem; opacity: 0.8; display: block; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        
+        .tt-today { background-color: rgba(59, 91, 255, 0.05); border-color: rgba(59, 91, 255, 0.2); }
+        .tt-today-text { color: var(--primary); }
+
+        /* Color palette logic will be applied via JS based on subject_id */
+        .color-0 { background-color: #f1f5f9; color: #334155; border-left-color: #94a3b8; }
+        .color-1 { background-color: #e0f2fe; color: #0369a1; border-left-color: #38bdf8; }
+        .color-2 { background-color: #dcfce7; color: #15803d; border-left-color: #4ade80; }
+        .color-3 { background-color: #fef3c7; color: #b45309; border-left-color: #fbbf24; }
+        .color-4 { background-color: #fce7f3; color: #be185d; border-left-color: #f472b6; }
+        .color-5 { background-color: #ede9fe; color: #6d28d9; border-left-color: #a78bfa; }
+
+        @media (max-width: 992px) {
+            .tt-grid { display: flex; flex-direction: column; gap: 2rem; }
+            .tt-time-col { display: none; }
+            .tt-day-bg { display: none; }
+            .tt-header { text-align: left; font-size: 1.2rem; background: transparent; border: none; padding: 0 0 0.5rem 0; border-bottom: 2px solid var(--border-color); border-radius: 0; margin-bottom: 1rem; }
+            .tt-slot { position: relative; margin-bottom: 10px; height: auto !important; top: auto !important; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Reuse simple dashboard header -->
+<div class="dashboard-container" style="padding-bottom: 0;">
+    <div class="dashboard-header">
+        <h1>Weekly Timetable</h1>
+        <div class="header-actions" style="display: flex; align-items: center; gap: 1rem;">
+            <a href="{{ url_for('dashboard.index') }}" style="color: var(--text-dark);">Dashboard</a>
+            <span style="color: var(--text-light); border-left: 1px solid var(--border-color); padding-left: 1rem;">Role: {{ current_user.role|capitalize }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="tt-container">
+    {% if current_user.role == 'student' %}
+        <p style="color: var(--text-light); margin-bottom: 1rem;">Showing slots for section: <strong>{{ current_user.student_profile.class_section if current_user.student_profile else 'Not Assigned' }}</strong></p>
+    {% elif current_user.role == 'teacher' %}
+        <p style="color: var(--text-light); margin-bottom: 1rem;">Showing your assigned classes.</p>
+    {% else %}
+        <p style="color: var(--text-light); margin-bottom: 1rem;">Showing all scheduled classes. Filter using search (to be implemented).</p>
+    {% endif %}
+
+    <div class="tt-grid" id="tt-grid">
+        <div class="tt-time-col">
+            <!-- 8 AM to 6 PM -->
+            <div class="tt-time-label">08:00</div>
+            <div class="tt-time-label">09:00</div>
+            <div class="tt-time-label">10:00</div>
+            <div class="tt-time-label">11:00</div>
+            <div class="tt-time-label">12:00</div>
+            <div class="tt-time-label">13:00</div>
+            <div class="tt-time-label">14:00</div>
+            <div class="tt-time-label">15:00</div>
+            <div class="tt-time-label">16:00</div>
+            <div class="tt-time-label">17:00</div>
+            <div class="tt-time-label">18:00</div>
+        </div>
+        
+        <div class="tt-day-col" id="col-Monday">
+            <div class="tt-header">Monday</div>
+            <div class="tt-day-bg"></div>
+            <!-- Slots injected here -->
+        </div>
+        <div class="tt-day-col" id="col-Tuesday">
+            <div class="tt-header">Tuesday</div>
+            <div class="tt-day-bg"></div>
+        </div>
+        <div class="tt-day-col" id="col-Wednesday">
+            <div class="tt-header">Wednesday</div>
+            <div class="tt-day-bg"></div>
+        </div>
+        <div class="tt-day-col" id="col-Thursday">
+            <div class="tt-header">Thursday</div>
+            <div class="tt-day-bg"></div>
+        </div>
+        <div class="tt-day-col" id="col-Friday">
+            <div class="tt-header">Friday</div>
+            <div class="tt-day-bg"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Highlight today
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const todayName = days[new Date().getDay()];
+        if(todayName !== 'Sunday' && todayName !== 'Saturday') {
+            const todayCol = document.getElementById('col-' + todayName);
+            if(todayCol) {
+                todayCol.querySelector('.tt-header').classList.add('tt-today', 'tt-today-text');
+                todayCol.classList.add('tt-today');
+            }
+        }
+
+        let apiEndpoint = '/api/timetable/view';
+
+        fetch(apiEndpoint)
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(slot => {
+                    const col = document.getElementById('col-' + slot.day_of_week);
+                    if(col) {
+                        const startParts = slot.start_time.split(':');
+                        const endParts = slot.end_time.split(':');
+                        
+                        // Parse time relative to 8:00 AM grid start
+                        const startHour = parseInt(startParts[0]) + (parseInt(startParts[1])/60);
+                        const endHour = parseInt(endParts[0]) + (parseInt(endParts[1])/60);
+                        
+                        // Grid layout logic (90px per hour band + 10px gap = 100px total row delta)
+                        // Offset = (Hours from 8AM) * 90px height
+                        const topOffset = 60 + ((startHour - 8) * 90);
+                        const height = (endHour - startHour) * 80; // slightly smaller than 90 to allow gap between sequential classes
+
+                        const el = document.createElement('div');
+                        el.className = `tt-slot color-${slot.subject_id % 6}`;
+                        el.style.top = topOffset + 'px';
+                        el.style.height = height + 'px';
+                        
+                        el.innerHTML = `
+                            <span class="tt-slot-title">${slot.subject_code} - ${slot.subject_name}</span>
+                            <span class="tt-slot-meta">${slot.start_time} - ${slot.end_time} &bull; Room ${slot.room_number}</span>
+                            <span class="tt-slot-meta">${slot.class_section} &bull; ${slot.teacher_name}</span>
+                        `;
+                        col.appendChild(el);
+                    }
+                });
+            });
+    });
+</script>
+</body>
+</html>

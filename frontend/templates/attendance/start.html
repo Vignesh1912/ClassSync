@@ -1,0 +1,294 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto; background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); padding: 2rem;">
+    <h2 style="color: var(--text-dark); margin-top: 0; font-family: 'Inter', sans-serif;">Start Attendance Session</h2>
+    <p style="color: var(--text-light); margin-bottom: 24px; font-family: 'Inter', sans-serif;">Configure the geofence perimeter and time limit for your class.</p>
+
+    <!-- Error/Success Messages container via JS -->
+    <div id="alert-container"></div>
+
+    <form id="start-session-form" class="auth-form">
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label class="form-label" for="subject_id" style="font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-dark);">Subject</label>
+            <select id="subject_id" class="form-control" style="border-radius: 8px; border: 1px solid var(--border-color); padding: 0.75rem; font-family: 'Inter', sans-serif;" required>
+                {% for subject in subjects %}
+                    <option value="{{ subject.id }}">{{ subject.subject_code }} - {{ subject.subject_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div class="form-group">
+                <label class="form-label" for="duration_minutes" style="font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-dark);">Duration</label>
+                <select id="duration_minutes" class="form-control" style="border-radius: 8px; border: 1px solid var(--border-color); padding: 0.75rem; font-family: 'Inter', sans-serif;" required>
+                    <option value="5">5 minutes</option>
+                    <option value="10" selected>10 minutes</option>
+                    <option value="15">15 minutes</option>
+                    <option value="20">20 minutes</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="radius_meters" style="font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-dark);">Radius</label>
+                <select id="radius_meters" class="form-control" style="border-radius: 8px; border: 1px solid var(--border-color); padding: 0.75rem; font-family: 'Inter', sans-serif;" required>
+                    <option value="30">30 metres</option>
+                    <option value="50" selected>50 metres</option>
+                    <option value="100">100 metres</option>
+                    <option value="200">200 metres</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label class="form-label" for="classroom_name" style="font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-dark);">Classroom Name</label>
+            <input type="text" id="classroom_name" class="form-control" style="border-radius: 8px; border: 1px solid var(--border-color); padding: 0.75rem; font-family: 'Inter', sans-serif;" placeholder="e.g. LT-1, Room 101" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label class="form-label" for="class_section" style="font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-dark);">Class Section <span style="font-weight: 400; color: var(--text-light); font-size: 0.85rem;">(Only students in this section will see this session)</span></label>
+            <input type="text" id="class_section" class="form-control" style="border-radius: 8px; border: 1px solid var(--border-color); padding: 0.75rem; font-family: 'Inter', sans-serif;" placeholder="e.g. Semester 4 - CSE Delta">
+            <span style="font-size: 0.8rem; color: var(--text-light); margin-top: 0.4rem; display: block;">Leave blank to allow all sections to mark attendance.</span>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem;">
+            <h3 style="margin-top: 0; font-size: 1rem; color: var(--text-dark); font-family: 'Inter', sans-serif;">Coordinates Configuration</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; margin-top: 1rem;">
+                
+                <!-- Option A: Geolocation -->
+                <div>
+                    <label class="form-label" style="font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-dark);">Option A</label>
+                    <button type="button" class="btn" style="background: white; border: 1px solid var(--border-color); color: var(--text-dark); border-radius: 8px; padding: 0.75rem; width: 100%; text-align: center; font-family: 'Inter', sans-serif; font-weight: 500; cursor: pointer;" id="btn-get-location">
+                        📍 Use My Location
+                    </button>
+                    <div id="location-status" style="font-size: 0.85rem; color: #10b981; font-family: 'Inter', sans-serif; margin-top: 0.5rem; display: none;"></div>
+                </div>
+
+                <!-- Option B: Manual Input -->
+                <div style="border-left: 1px solid var(--border-color); padding-left: 1.5rem;">
+                    <label class="form-label" style="font-family: 'Inter', sans-serif; font-weight: 500; color: var(--text-dark);">Option B <span style="font-weight: 400; color: var(--text-light); font-size: 0.85rem;">(Desktop Testing — Enter coordinates manually)</span></label>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <input type="number" id="latitude" class="form-control" step="any" style="border-radius: 8px; border: 1px solid var(--border-color); padding: 0.5rem;" placeholder="18.5204" required>
+                        <input type="number" id="longitude" class="form-control" step="any" style="border-radius: 8px; border: 1px solid var(--border-color); padding: 0.5rem;" placeholder="73.8567" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn" style="background: #3B5BFF; color: white; width: 100%; padding: 0.875rem; border-radius: 8px; font-family: 'Inter', sans-serif; font-weight: 600; border: none; cursor: pointer;">Start Session</button>
+    </form>
+
+    <!-- Active Session Dashboard (Hidden by default) -->
+    <div id="active-session-dashboard" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
+            <div>
+                <h2 id="dash-header" style="color: var(--text-dark); margin: 0 0 0.5rem 0; font-family: 'Inter', sans-serif;">Session Active</h2>
+                <h3 id="dash-subject" style="color: var(--primary); margin: 0 0 0.25rem 0; font-family: 'Inter', sans-serif; font-size: 1.1rem;"></h3>
+                <p style="color: var(--text-light); margin: 0; font-family: 'Inter', sans-serif; font-size: 1rem;"><span id="dash-classroom"></span></p>
+            </div>
+            
+            <div style="background: #eff6ff; padding: 1rem; border-radius: 8px; text-align: center; min-width: 120px; border: 1px solid #bfdbfe;">
+                <p style="font-size: 0.75rem; color: #3B5BFF; font-weight: 600; font-family: 'Inter', sans-serif; margin: 0 0 0.25rem 0; text-transform: uppercase;">Time Left</p>
+                <div id="dash-countdown" style="font-size: 1.75rem; font-weight: 700; color: var(--text-dark); font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums;">--:--</div>
+            </div>
+        </div>
+
+        <div style="margin: 2rem 0; padding: 2rem; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); text-align: center;">
+            <p style="font-size: 1rem; color: var(--text-light); font-family: 'Inter', sans-serif; margin: 0 0 0.5rem 0; font-weight: 500;">Students Present</p>
+            <div id="dash-present-count" style="font-size: 3.5rem; font-weight: 700; color: #3B5BFF; font-family: 'Inter', sans-serif; line-height: 1;">0</div>
+        </div>
+
+        <button type="button" class="btn" id="btn-close-session" style="background: white; color: #ef4444; border: 1px solid #ef4444; width: 100%; font-family: 'Inter', sans-serif; font-weight: 600; padding: 0.875rem; border-radius: 8px; cursor: pointer; transition: all 0.2s;">Close Session Early</button>
+    </div>
+</div>
+
+<script>
+    let pollInterval;
+    let countdownInterval;
+    let activeSessionId = null;
+
+    // On page load: check if teacher already has an active session and restore dashboard
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/attendance/active-sessions');
+            if (!res.ok) return;
+            const sessions = await res.json();
+            if (sessions.length > 0) {
+                const s = sessions[0]; // restore the most recent active session
+                document.getElementById('start-session-form').style.display = 'none';
+                startLiveDashboard(s, s.subject_name || 'Active Session');
+            }
+        } catch(e) {}
+    });
+
+    // Option A: Geolocation
+    document.getElementById('btn-get-location').addEventListener('click', () => {
+        const btn = document.getElementById('btn-get-location');
+        btn.textContent = 'Locating...';
+        btn.disabled = true;
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    document.getElementById('latitude').value = lat;
+                    document.getElementById('longitude').value = lon;
+                    
+                    const status = document.getElementById('location-status');
+                    status.style.display = 'block';
+                    status.textContent = `Location captured: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                    
+                    btn.textContent = '📍 Use My Location';
+                    btn.disabled = false;
+                },
+                (error) => {
+                    alert('Error getting location: ' + error.message);
+                    btn.textContent = '📍 Use My Location';
+                    btn.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser");
+            btn.textContent = '📍 Use My Location';
+            btn.disabled = false;
+        }
+    });
+
+    // Handle Form Submit
+    document.getElementById('start-session-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            subject_id: document.getElementById('subject_id').value,
+            classroom_name: document.getElementById('classroom_name').value,
+            class_section: document.getElementById('class_section').value,
+            duration_minutes: document.getElementById('duration_minutes').value,
+            radius_meters: document.getElementById('radius_meters').value,
+            latitude: document.getElementById('latitude').value,
+            longitude: document.getElementById('longitude').value
+        };
+
+        try {
+            const res = await fetch('/api/attendance/start-session', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (res.ok) {
+                // Hide form, show dashboard
+                document.getElementById('start-session-form').style.display = 'none';
+                
+                const subjectSelect = document.getElementById('subject_id');
+                const subjectName = subjectSelect.options[subjectSelect.selectedIndex].text.split(' - ')[1] || subjectSelect.options[subjectSelect.selectedIndex].text;
+                
+                startLiveDashboard(data.session, subjectName);
+            } else {
+                showAlert(data.error || 'Failed to start session', 'error');
+            }
+        } catch (err) {
+            showAlert('Network error: ' + err.message, 'error');
+        }
+    });
+
+    // Close session early
+    document.getElementById('btn-close-session').addEventListener('click', async () => {
+        if (!activeSessionId) return;
+        if (!confirm('Are you sure you want to close this session early?')) return;
+        
+        try {
+            const res = await fetch(`/api/attendance/close-session/${activeSessionId}`, { method: 'POST' });
+            if (res.ok) {
+                markSessionExpired();
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to close session');
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        }
+    });
+
+    function startLiveDashboard(session, subjectName) {
+        activeSessionId = session.id;
+        document.getElementById('active-session-dashboard').style.display = 'block';
+        document.getElementById('dash-subject').textContent = subjectName;
+        document.getElementById('dash-classroom').textContent = session.classroom_name;
+        document.getElementById('dash-present-count').textContent = session.total_present;
+        
+        // Start Countdown calculation
+        // Ensure duration_minutes is cast correctly to minutes from the payload
+        const durationMs = parseInt(session.end_time_limit ? 
+                            (new Date(session.end_time_limit + 'Z').getTime() - new Date().getTime()) : 
+                            (document.getElementById('duration_minutes').value * 60 * 1000));
+                            
+        const endTime = new Date().getTime() + durationMs;
+        
+        countdownInterval = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = endTime - now;
+            
+            if (distance < 0) {
+                markSessionExpired();
+            } else {
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                document.getElementById('dash-countdown').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+        
+        // Polling sequence
+        pollInterval = setInterval(async () => {
+            try {
+                const res = await fetch('/api/attendance/active-sessions');
+                if (res.ok) {
+                    const sessions = await res.json();
+                    const currentSession = sessions.find(s => s.id === activeSessionId);
+                    
+                    if (currentSession) {
+                        document.getElementById('dash-present-count').textContent = currentSession.total_present;
+                    }
+                }
+            } catch (err) {}
+        }, 10000); // Poll every 10 seconds
+    }
+
+    function markSessionExpired() {
+        clearInterval(countdownInterval);
+        clearInterval(pollInterval);
+        document.getElementById('dash-countdown').textContent = '00:00';
+        document.getElementById('btn-close-session').style.display = 'none';
+        
+        const header = document.getElementById('dash-header');
+        header.textContent = 'Session Expired';
+        header.style.color = '#dc2626'; // Red
+    }
+
+    function showAlert(msg, type) {
+        const div = document.createElement('div');
+        div.style.padding = '1rem';
+        div.style.marginBottom = '1.5rem';
+        div.style.borderRadius = '8px';
+        div.style.fontWeight = '500';
+        div.style.fontFamily = "'Inter', sans-serif";
+        if (type === 'error') {
+            div.style.backgroundColor = '#fef2f2';
+            div.style.color = '#dc2626';
+            div.style.border = '1px solid #fecaca';
+        }
+        div.textContent = msg;
+        const container = document.getElementById('alert-container');
+        container.innerHTML = '';
+        container.appendChild(div);
+        
+        if (type !== 'error') {
+            setTimeout(() => div.remove(), 5000);
+        }
+    }
+</script>
+{% endblock %}

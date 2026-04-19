@@ -1,0 +1,61 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div style="max-width: 900px;">
+    <!-- All Assignments Below -->
+
+    <!-- All Assignments -->
+    <div>
+        <h2 style="font-size:1.2rem; font-weight:700; margin-bottom:1.25rem;">All Assignments</h2>
+        <div id="all-loading" style="color:var(--text-light);font-size:.9rem;">Loading assignments…</div>
+        <div id="all-empty" style="display:none; color:var(--text-light); padding:1rem 0;">No assignments found.</div>
+        <div id="all-table-wrap" style="display:none; overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:.9rem;">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--border-color); text-align:left;">
+                        <th style="padding:.75rem 1rem; font-size:.78rem; font-weight:600; color:var(--text-light); text-transform:uppercase; letter-spacing:.04em;">Title</th>
+                        <th style="padding:.75rem 1rem; font-size:.78rem; font-weight:600; color:var(--text-light); text-transform:uppercase; letter-spacing:.04em;">Subject</th>
+                        <th style="padding:.75rem 1rem; font-size:.78rem; font-weight:600; color:var(--text-light); text-transform:uppercase; letter-spacing:.04em;">Deadline</th>
+                        <th style="padding:.75rem 1rem; font-size:.78rem; font-weight:600; color:var(--text-light); text-transform:uppercase; letter-spacing:.04em;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="all-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function fmtDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { weekday:'short', day:'2-digit', month:'short', year:'numeric' });
+}
+
+// ── All Assignments Below ───────────────────────────────────────────────────────
+
+// ── All Assignments ────────────────────────────────────────────────────────────
+fetch('/api/assignments/list')
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('all-loading').style.display = 'none';
+        if (!data.length) { document.getElementById('all-empty').style.display = 'block'; return; }
+        const tbody = document.getElementById('all-tbody');
+        document.getElementById('all-table-wrap').style.display = 'block';
+        data.forEach(a => {
+            const badge = a.submission_status === 'submitted'
+                ? '<span style="font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;">Submitted</span>'
+                : '<span style="font-size:.78rem;font-weight:600;padding:3px 10px;border-radius:999px;background:#ffedd5;color:#ea580c;border:1px solid #fed7aa;">Pending</span>';
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border-color)';
+            tr.style.cursor = 'pointer';
+            tr.onclick = () => window.location.href = `/assignments/${a.id}`;
+            tr.innerHTML = `
+                <td style="padding:.8rem 1rem;font-weight:500;">${a.title}</td>
+                <td style="padding:.8rem 1rem;color:var(--text-light);">${a.subject_name}</td>
+                <td style="padding:.8rem 1rem;color:var(--text-light);">${fmtDate(a.deadline)}</td>
+                <td style="padding:.8rem 1rem;">${badge}</td>`;
+            tbody.appendChild(tr);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+[
+  {
+    "i": 0,
+    "label": "DO $$ BEGIN",
+    "status": "ok"
+  },
+  {
+    "i": 1,
+    "label": "CREATE TABLE IF NOT EXISTS users (",
+    "status": "ok"
+  },
+  {
+    "i": 2,
+    "label": "CREATE TABLE IF NOT EXISTS subjects (",
+    "status": "ok"
+  },
+  {
+    "i": 3,
+    "label": "CREATE TABLE IF NOT EXISTS students (",
+    "status": "ok"
+  },
+  {
+    "i": 4,
+    "label": "CREATE TABLE IF NOT EXISTS teachers (",
+    "status": "ok"
+  },
+  {
+    "i": 5,
+    "label": "CREATE TABLE IF NOT EXISTS timetable (",
+    "status": "ok"
+  },
+  {
+    "i": 6,
+    "label": "CREATE TABLE IF NOT EXISTS attendance_sessions (",
+    "status": "ok"
+  },
+  {
+    "i": 7,
+    "label": "CREATE TABLE IF NOT EXISTS attendance (",
+    "status": "ok"
+  },
+  {
+    "i": 8,
+    "label": "CREATE TABLE IF NOT EXISTS session_activity_log (",
+    "status": "ok"
+  },
+  {
+    "i": 9,
+    "label": "CREATE TABLE IF NOT EXISTS notification_prefs (",
+    "status": "ok"
+  },
+  {
+    "i": 10,
+    "label": "CREATE TABLE IF NOT EXISTS assignments (",
+    "status": "ok"
+  },
+  {
+    "i": 11,
+    "label": "CREATE TABLE IF NOT EXISTS submissions (",
+    "status": "ok"
+  },
+  {
+    "i": 12,
+    "label": "CREATE TABLE IF NOT EXISTS announcements (",
+    "status": "ok"
+  },
+  {
+    "i": 13,
+    "label": "CREATE TABLE IF NOT EXISTS notifications (",
+    "status": "ok"
+  },
+  {
+    "i": 14,
+    "label": "CREATE TABLE IF NOT EXISTS announcement_reads (",
+    "status": "ok"
+  }
+]

@@ -1,0 +1,139 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div style="max-width: 600px;">
+    <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:1.5rem;">Profile & Preferences</h2>
+
+    <!-- User Info Card -->
+    <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;">
+        <h3 style="font-size:.95rem;font-weight:700;margin-bottom:1.25rem;color:var(--text-dark);">Account Information</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem 1.5rem;font-size:.9rem;">
+            <div>
+                <div style="font-size:.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:2px;">Name</div>
+                <div style="font-weight:500;">{{ current_user.name }}</div>
+            </div>
+            <div>
+                <div style="font-size:.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:2px;">Email</div>
+                <div style="font-weight:500;">{{ current_user.email }}</div>
+            </div>
+            <div>
+                <div style="font-size:.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:2px;">Role</div>
+                <div style="font-weight:500;">{{ current_user.role | capitalize }}</div>
+            </div>
+            <div>
+                <div style="font-size:.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:2px;">Department</div>
+                <div style="font-weight:500;">{{ current_user.department or '—' }}</div>
+            </div>
+            <div>
+                <div style="font-size:.75rem;color:var(--text-light);text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:2px;">College User ID</div>
+                <div style="font-weight:500;">{{ current_user.college_user_id }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Preferences Card -->
+    {% if current_user.role == 'student' %}
+    <div style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:1.5rem;">
+        <h3 style="font-size:.95rem;font-weight:700;margin-bottom:0.25rem;color:var(--text-dark);">Email Reminder Preferences</h3>
+        <p style="font-size:.85rem;color:var(--text-light);margin-bottom:1.25rem;">Control when ClassSync sends you assignment deadline reminders.</p>
+
+        <!-- Master toggle -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:.85rem 1rem;background:#f8fafc;border-radius:8px;border:1px solid var(--border-color);margin-bottom:1rem;">
+            <div>
+                <div style="font-weight:600;font-size:.92rem;">Email Reminders</div>
+                <div style="font-size:.8rem;color:var(--text-light);">Enable or disable all email reminders</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:44px;height:24px;">
+                <input type="checkbox" id="email_enabled" style="opacity:0;width:0;height:0;"
+                       {% if prefs is none or prefs.email_enabled %}checked{% endif %}>
+                <span style="position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:999px;transition:.3s;" id="master-slider">
+                    <!-- White Sliding Knob -->
+                    <span id="slider-knob" style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 1px 3px rgba(0,0,0,0.15);pointer-events:none;"></span>
+                </span>
+            </label>
+        </div>
+
+        <!-- Individual days -->
+        <div style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:1.5rem;">
+            {% set day_prefs = [
+                ('remind_3days', '3 days before deadline', prefs.remind_3days if prefs else True),
+                ('remind_2days', '2 days before deadline', prefs.remind_2days if prefs else True),
+                ('remind_1day',  '1 day before deadline',  prefs.remind_1day  if prefs else True),
+                ('remind_deadline', 'On the day of the deadline', prefs.remind_deadline if prefs else True)
+            ] %}
+            {% for field, label, val in day_prefs %}
+            <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer;font-size:.9rem;">
+                <input type="checkbox" id="{{ field }}" {% if val %}checked{% endif %}
+                       style="width:16px;height:16px;cursor:pointer;accent-color:#3B5BFF;">
+                {{ label }}
+            </label>
+            {% endfor %}
+        </div>
+
+        <button onclick="savePrefs()" class="btn btn-primary" style="width:100%;">Save Preferences</button>
+        <div id="prefs-msg" style="display:none;margin-top:.75rem;padding:.7rem 1rem;border-radius:8px;font-size:.88rem;"></div>
+    </div>
+    {% endif %}
+
+    <!-- Account Actions -->
+    <div class="cs-card" style="margin-top:1.25rem;">
+        <a href="{{ url_for('auth.logout') }}" class="btn" 
+           style="width:100%; text-align:center; background:#fee2e2; color:#dc2626; border:1px solid #fecaca; font-weight:700; padding:.8rem 1rem; border-radius:12px; text-decoration:none; display:block; transition:background .15s;"
+           onmouseover="this.style.background='#fecaca'" 
+           onmouseout="this.style.background='#fee2e2'">
+            🚪 Logout of ClassSync
+        </a>
+    </div>
+</div>
+
+<script>
+// Style the master toggle
+function updateSlider() {
+    const cb = document.getElementById('email_enabled');
+    const slider = document.getElementById('master-slider');
+    const knob = document.getElementById('slider-knob');
+    if (!slider || !knob) return;
+    slider.style.background = cb.checked ? '#3B5BFF' : '#cbd5e1';
+    knob.style.transform = cb.checked ? 'translateX(20px)' : 'translateX(0)';
+}
+    const emailToggle = document.getElementById('email_enabled');
+    if (emailToggle) {
+        emailToggle.addEventListener('change', updateSlider);
+        updateSlider();
+    }
+
+function savePrefs() {
+    const payload = {
+        email_enabled:    document.getElementById('email_enabled').checked,
+        remind_3days:     document.getElementById('remind_3days').checked,
+        remind_2days:     document.getElementById('remind_2days').checked,
+        remind_1day:      document.getElementById('remind_1day').checked,
+        remind_deadline:  document.getElementById('remind_deadline').checked,
+    };
+
+    fetch('/api/notification-prefs/update', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        const msg = document.getElementById('prefs-msg');
+        msg.style.display = 'block';
+        msg.style.background = '#dcfce7';
+        msg.style.color = '#16a34a';
+        msg.style.border = '1px solid #bbf7d0';
+        msg.textContent = '✓ Preferences saved successfully.';
+        setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    })
+    .catch(() => {
+        const msg = document.getElementById('prefs-msg');
+        msg.style.display = 'block';
+        msg.style.background = '#fee2e2';
+        msg.style.color = '#dc2626';
+        msg.style.border = '1px solid #fecaca';
+        msg.textContent = 'Failed to save. Please try again.';
+    });
+}
+</script>
+{% endblock %}

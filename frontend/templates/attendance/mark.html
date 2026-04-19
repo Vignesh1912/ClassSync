@@ -1,0 +1,225 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <h2>Mark Your Attendance</h2>
+    <p style="color: var(--text-light); margin-bottom: 20px;">Your location will be verified against the classroom's geofence boundaries.</p>
+
+    <!-- State 1: Loading Sessions -->
+    <div id="loading-state" style="text-align: center; padding: 2rem; color: var(--text-light);">
+        <p>Scanning for active sessions in your department...</p>
+    </div>
+
+    <!-- State 2: No Active Sessions -->
+    <div id="no-session-state" style="display: none; text-align: center; padding: 3rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border-color);">
+        <h3 style="color: var(--text-dark); margin: 0 0 0.5rem 0;">No active attendance session right now</h3>
+        <p style="color: var(--text-light); margin: 0;">Wait for your teacher to start a session before marking.</p>
+        <button class="btn btn-primary" onclick="window.location.reload()" style="margin-top: 1.5rem; width: auto; background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-dark);">Refresh Status</button>
+    </div>
+
+    <!-- State 3: Active Session Found -->
+    <div id="active-session-state" style="display: none;">
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                <div>
+                    <h3 id="sess-subject" style="margin: 0 0 0.25rem 0; color: var(--text-dark);"></h3>
+                    <p style="margin: 0; color: var(--text-light); font-size: 0.9rem;">Teacher: <span id="sess-teacher" style="font-weight: 500; color: var(--text-dark);"></span></p>
+                </div>
+                <div style="background: #dbeafe; padding: 0.5rem 0.75rem; border-radius: 6px; text-align: center;">
+                    <span style="font-size: 0.75rem; font-weight: 600; color: var(--primary); text-transform: uppercase; display: block;">Time Left</span>
+                    <span id="sess-countdown" style="font-weight: 700; color: var(--text-dark); font-variant-numeric: tabular-nums;">--:--</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; color: var(--text-dark); font-weight: 500; background: #fff; padding: 0.75rem; border-radius: 6px; border: 1px solid #bfdbfe;">
+                <span>📍 Classroom:</span>
+                <span id="sess-classroom"></span>
+            </div>
+        </div>
+
+        <!-- Result Card placeholder -->
+        <div id="result-card" style="display: none; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 500; text-align: center;"></div>
+
+        <div id="marking-controls">
+            <button type="button" class="btn btn-primary" id="btn-mark-gps" style="margin-bottom: 1.5rem;">
+                Mark My Attendance automatically using GPS
+            </button>
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-light); margin-bottom: 0.5rem;">Testing mode — enter coordinates manually</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <input type="number" id="test-lat" class="form-control" step="any" placeholder="Latitude (e.g. 18.5204)">
+                <input type="number" id="test-lon" class="form-control" step="any" placeholder="Longitude (e.g. 73.8567)">
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-mark-manual" style="background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-dark);">
+                Submit Manual Coordinates
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activeSession = null;
+    let countdownInterval = null;
+
+    let pollingActiveSessions;
+
+    // Run on load and start 15s interval polling
+    window.addEventListener('DOMContentLoaded', () => {
+        fetchActiveSessions();
+        pollingActiveSessions = setInterval(fetchActiveSessions, 15000);
+    });
+
+    async function fetchActiveSessions() {
+        try {
+            const res = await fetch('/api/attendance/active-sessions');
+            const sessions = await res.json();
+            
+            document.getElementById('loading-state').style.display = 'none';
+
+            if (sessions && sessions.length > 0) {
+                // If we found a session, stop polling for new ones, and render it
+                clearInterval(pollingActiveSessions);
+                document.getElementById('no-session-state').style.display = 'none';
+                activeSession = sessions[0];
+                renderActiveSession(activeSession);
+            } else {
+                document.getElementById('no-session-state').style.display = 'block';
+            }
+        } catch (err) {
+            document.getElementById('loading-state').innerHTML = `<p style="color: #ef4444;">Failed to load sessions: ${err.message}</p>`;
+        }
+    }
+
+    function renderActiveSession(session) {
+        document.getElementById('active-session-state').style.display = 'block';
+        document.getElementById('sess-subject').textContent = session.subject_name;
+        document.getElementById('sess-teacher').textContent = session.teacher_name;
+        document.getElementById('sess-classroom').textContent = session.classroom_name;
+        
+        // Timer
+        const endTime = new Date(session.end_time_limit + 'Z').getTime();
+        
+        countdownInterval = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = endTime - now;
+            
+            if (distance < 0) {
+                clearInterval(countdownInterval);
+                document.getElementById('sess-countdown').textContent = '00:00';
+                showResultCard('Session has ended.', 'warning');
+                document.getElementById('marking-controls').style.display = 'none';
+            } else {
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                document.getElementById('sess-countdown').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+    }
+
+    // Option A: Live Geolocation
+    document.getElementById('btn-mark-gps').addEventListener('click', () => {
+        const btn = document.getElementById('btn-mark-gps');
+        btn.textContent = 'Acquiring GPS Signal...';
+        btn.disabled = true;
+
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    submitAttendance(lat, lon, btn, 'Mark My Attendance automatically using GPS');
+                },
+                (error) => {
+                    alert('Error getting location: ' + error.message);
+                    btn.textContent = 'Mark My Attendance automatically using GPS';
+                    btn.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            alert("Geolocation is not supported by your browser");
+            btn.textContent = 'Mark My Attendance automatically using GPS';
+            btn.disabled = false;
+        }
+    });
+
+    // Option B: Manual Testing Submits
+    document.getElementById('btn-mark-manual').addEventListener('click', () => {
+        const lat = parseFloat(document.getElementById('test-lat').value);
+        const lon = parseFloat(document.getElementById('test-lon').value);
+        
+        if (!lat || !lon) {
+            alert('Please enter both latitude and longitude for testing.');
+            return;
+        }
+        
+        const btn = document.getElementById('btn-mark-manual');
+        btn.textContent = 'Submitting...';
+        btn.disabled = true;
+        
+        submitAttendance(lat, lon, btn, 'Submit Manual Coordinates');
+    });
+
+    async function submitAttendance(lat, lon, btnElement, originalBtnText) {
+        if (!activeSession) return;
+        
+        try {
+            const res = await fetch('/api/attendance/mark', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: activeSession.id,
+                    latitude: lat,
+                    longitude: lon
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok) {
+                showResultCard(`Attendance marked! You were ${Math.round(data.distance_from_class)} metres from the classroom.`, 'success');
+                document.getElementById('marking-controls').style.display = 'none';
+            } else {
+                if (res.status === 409) {
+                    showResultCard('Already marked for this session.', 'info');
+                    document.getElementById('marking-controls').style.display = 'none';
+                } else if (res.status === 403 && data.error.includes("Outside radius")) {
+                    showResultCard(data.error, 'error');
+                } else {
+                    showResultCard(data.error || 'Failed to mark attendance', 'error');
+                }
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        } finally {
+            if (btnElement) {
+                btnElement.textContent = originalBtnText;
+                btnElement.disabled = false;
+            }
+        }
+    }
+
+    function showResultCard(msg, type) {
+        const card = document.getElementById('result-card');
+        card.style.display = 'block';
+        card.textContent = msg;
+        
+        if (type === 'success') {
+            card.style.backgroundColor = '#ecfdf5'; // Green
+            card.style.color = '#047857';
+            card.style.border = '1px solid #a7f3d0';
+        } else if (type === 'info') {
+            card.style.backgroundColor = '#eff6ff'; // Blue
+            card.style.color = '#1d4ed8';
+            card.style.border = '1px solid #bfdbfe';
+        } else if (type === 'error') {
+            card.style.backgroundColor = '#fef2f2'; // Red
+            card.style.color = '#b91c1c';
+            card.style.border = '1px solid #fecaca';
+        } else if (type === 'warning') {
+            card.style.backgroundColor = '#fefce8'; // Yellow
+            card.style.color = '#a16207';
+            card.style.border = '1px solid #fef08a';
+        }
+    }
+</script>
+{% endblock %}

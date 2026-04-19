@@ -1,0 +1,110 @@
+{% extends "dashboard/base.html" %}
+
+{% block content %}
+<div style="max-width: 640px;">
+    <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:1.5rem;">Create Assignment</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div style="margin-bottom:1.5rem;">
+        {% for cat, msg in messages %}
+            <div style="padding:.8rem 1rem; border-radius:8px; font-size:.9rem; margin-bottom:.5rem;
+                        {% if cat == 'error' %}background:#fee2e2;color:#dc2626;border:1px solid #fecaca;
+                        {% else %}background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;{% endif %}">
+                {{ msg }}
+            </div>
+        {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <form id="create-form" method="POST" action="/api/assignments/create-form"
+          enctype="multipart/form-data"
+          style="background:#fff;border:1px solid var(--border-color);border-radius:12px;padding:1.75rem;">
+
+        <div class="form-group">
+            <label class="form-label">Assignment Title *</label>
+            <input type="text" name="title" class="form-control" placeholder="e.g. Unit 3 Assignment" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Subject *</label>
+            <select name="subject_id" class="form-control" required>
+                <option value="">Select Subject</option>
+                {% for subject in subjects %}
+                <option value="{{ subject.id }}">{{ subject.subject_name }} ({{ subject.subject_code }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Description <span style="color:var(--text-light);font-weight:400;">(Optional)</span></label>
+            <textarea name="description" class="form-control" rows="3" placeholder="Add any instructions or context here…" style="resize:vertical;"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Deadline *</label>
+            <input type="datetime-local" name="deadline" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Google Classroom Link <span style="color:var(--text-light);font-weight:400;">(Optional)</span></label>
+            <input type="url" name="classroom_link" class="form-control"
+                   placeholder="https://classroom.google.com/c/…">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Question Paper <span style="color:var(--text-light);font-weight:400;">(Optional · PDF only · max 16 MB)</span></label>
+            <input type="file" name="question_paper" id="file-input" accept=".pdf"
+                   class="form-control" onchange="showFileName(this)"
+                   style="padding:.5rem .75rem; cursor:pointer;">
+            <span id="file-name-display" class="form-helper" style="display:block;margin-top:.35rem;"></span>
+        </div>
+
+        <button type="button" onclick="submitForm()" class="btn btn-primary" style="margin-top:.5rem;">
+            Create Assignment
+        </button>
+        <span id="form-spinner" style="display:none;margin-left:1rem;color:var(--text-light);font-size:.9rem;">Saving…</span>
+    </form>
+    <div id="form-error" style="display:none;margin-top:1rem;padding:.8rem 1rem;border-radius:8px;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;font-size:.9rem;"></div>
+    <div id="form-success" style="display:none;margin-top:1rem;padding:.8rem 1rem;border-radius:8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;font-size:.9rem;"></div>
+</div>
+
+<script>
+function showFileName(input) {
+    const display = document.getElementById('file-name-display');
+    display.textContent = input.files.length ? '📎 ' + input.files[0].name : '';
+}
+
+function submitForm() {
+    const form = document.getElementById('create-form');
+    const spinner = document.getElementById('form-spinner');
+    const errEl = document.getElementById('form-error');
+    const okEl = document.getElementById('form-success');
+    errEl.style.display = 'none';
+    okEl.style.display = 'none';
+    spinner.style.display = 'inline';
+
+    const fd = new FormData(form);
+    fetch('/api/assignments/create', { method: 'POST', body: fd })
+        .then(r => r.json().then(data => ({ ok: r.ok, data })))
+        .then(({ ok, data }) => {
+            spinner.style.display = 'none';
+            if (ok) {
+                okEl.textContent = '✓ Assignment created and students notified.';
+                okEl.style.display = 'block';
+                form.reset();
+                document.getElementById('file-name-display').textContent = '';
+            } else {
+                errEl.textContent = data.error || 'Something went wrong.';
+                errEl.style.display = 'block';
+            }
+        })
+        .catch(() => {
+            spinner.style.display = 'none';
+            errEl.textContent = 'Network error. Please try again.';
+            errEl.style.display = 'block';
+        });
+}
+</script>
+{% endblock %}
