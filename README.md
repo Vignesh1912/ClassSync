@@ -2,7 +2,7 @@
 
 ClassSync is a comprehensive classroom management and attendance tracking platform designed to streamline the interaction between teachers and students. It features a robust authentication system, real-time GPS-based attendance tracking, assignment management, and a dynamic timetable system.
 
-**🔴 Live Demo:** [https://classsync.onrender.com](https://classsync.onrender.com) *(Deployed and running 24/7)*
+**🔴 Live Demo:** [https://YOUR-LIVE-URL-HERE.com](https://YOUR-LIVE-URL-HERE.com) *(Deployed and running 24/7)*
 
 ## Features
 
