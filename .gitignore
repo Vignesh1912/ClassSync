@@ -18,3 +18,12 @@ venv/
 app.db
 .env
 __pycache__/
+
+# Temporary and log files
+tmp_*
+*_out.txt
+output.txt
+*.log
+uploads/
+test_*.py
+test_*.js

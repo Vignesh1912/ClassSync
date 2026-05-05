@@ -1,2 +1,0 @@
-{"result":{"protocolVersion":"2024-11-05","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"insforge-mcp","version":"1.0.0"}},"jsonrpc":"2.0","id":1}
-{"result":{"content":[{"type":"text","text":"MCP error -32602: Input validation error: Invalid arguments for tool download-template: [\n  {\n    \"expected\": \"'react' | 'nextjs'\",\n    \"received\": \"undefined\",\n    \"code\": \"invalid_type\",\n    \"path\": [\n      \"frame\"\n    ],\n    \"message\": \"Required\"\n  }\n]"}],"isError":true},"jsonrpc":"2.0","id":2}
