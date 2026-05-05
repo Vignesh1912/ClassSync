@@ -2,6 +2,8 @@
 
 ClassSync is a comprehensive classroom management and attendance tracking platform designed to streamline the interaction between teachers and students. It features a robust authentication system, real-time GPS-based attendance tracking, assignment management, and a dynamic timetable system.
 
+**🔴 Live Demo:** [https://classsync.onrender.com](https://classsync.onrender.com) *(Deployed and running 24/7)*
+
 ## Features
 
 - **Role-Based Access Control**: Separate dashboards and functionalities for Teachers and Students.
@@ -76,14 +78,6 @@ ClassSync is a comprehensive classroom management and attendance tracking platfo
 ## Deployment
 
 The application is configured for seamless deployment on Render.com using the included `render.yaml` specification. It also utilizes InsForge's platform for deploying frontend/backend components and managing metadata.
-
-## Contributing
-
-1. Fork the project.
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
 
 ## License
 
