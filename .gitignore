@@ -27,3 +27,10 @@ output.txt
 uploads/
 test_*.py
 test_*.js
+
+# Scripts with keys
+delete_deployments.js
+deploy_mcp.js
+fetch_metadata.js
+fetch_template.js
+mcp_test.js
