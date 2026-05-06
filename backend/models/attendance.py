@@ -20,13 +20,18 @@ class AttendanceSession(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
+        def _iso_utc(dt):
+            if not dt: return None
+            iso = dt.isoformat()
+            return iso + 'Z' if not dt.tzinfo else iso
+
         return {
             'id': self.id,
             'teacher_id': self.teacher_id,
             'subject_id': self.subject_id,
-            'session_date': self.session_date.isoformat(),
-            'start_time': self.start_time.isoformat(),
-            'end_time_limit': self.end_time_limit.isoformat(),
+            'session_date': self.session_date.isoformat() if self.session_date else None,
+            'start_time': _iso_utc(self.start_time),
+            'end_time_limit': _iso_utc(self.end_time_limit),
             'classroom_name': self.classroom_name,
             'latitude': self.latitude,
             'longitude': self.longitude,
